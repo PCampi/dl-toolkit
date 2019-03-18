@@ -90,10 +90,10 @@ class ColumnSelector(BaseEstimator, TransformerMixin, BasePandasTransformer):
 
 class PercentChangeTransformer(BaseEstimator, TransformerMixin,
                                BasePandasTransformer):
-    """Given two columns A and B, it creates a new column which is the
+    """Given two columns A and B, it computes the
     percentage difference between A and B, with respect to A.
 
-    It means new_col = (A - B)/A
+    It means (B - A) / A, or (p_t+1 - p_t) / p_t
     """
 
     def __init__(self, col_a: Union[str, int], col_b: Union[str, int]):
@@ -111,25 +111,25 @@ class PercentChangeTransformer(BaseEstimator, TransformerMixin,
             a != 0.0), "cannot use a column with a zero entry as divisor"
         return self
 
-    def transform(self, X: pd.DataFrame):
+    def transform(self, X: pd.DataFrame) -> np.ndarray:
         a = self._select_column(X, self.col_a)
         b = self._select_column(X, self.col_b)
 
-        percentage = (a - b) / a
+        perc_change = (b - a) / a
 
-        return percentage
+        return perc_change
 
     def _check_columns(self, X: pd.DataFrame):
         self._check_column(X, self.col_a)
         self._check_column(X, self.col_b)
 
-    def _check_column(self, X: pd.DataFrame, column):
+    def _check_column(self, X: pd.DataFrame, column: Union[str, int]):
         if isinstance(column, str):
             assert column in X.columns, "column {column} is not in the dataframe"
         elif isinstance(column, int):
             assert column < len(
                 X.columns
-            ), f"column number {column} is greater than len(X.columns), which is {len(X.columns)}"
+            ), f"column number {column} is out of bounds, there are only {len(X.columns)} columns"
 
     def _select_column(self, X: pd.DataFrame,
                        column: Union[str, int]) -> np.ndarray:
@@ -137,13 +137,21 @@ class PercentChangeTransformer(BaseEstimator, TransformerMixin,
             return X.loc[:, column].values
         elif isinstance(column, int):
             return X.iloc[:, column].values
-        else:
-            raise TypeError(f"column must be str or int, got {type(column)}")
 
     def __check_init_params(self, col_a, col_b):
-        assert isinstance(col_a, str) or isinstance(
-            col_a,
-            int), f"col_a must be a string or integer, got {type(col_a)}"
-        assert isinstance(col_b, str) or isinstance(
-            col_b,
-            int), f"col_a must be a string or integer, got {type(col_b)}"
+        assert isinstance(col_a, str) or \
+            isinstance(col_a, int) and \
+            not isinstance(col_a, bool), f"col_a must be a string or integer, got {type(col_a)}"
+        assert isinstance(col_b, str) or \
+            isinstance(col_b, int) and \
+            not isinstance(col_b, bool), f"col_a must be a string or integer, got {type(col_b)}"
+
+        if isinstance(col_a, str):
+            assert col_a != '', "column A name is empty string"
+        if isinstance(col_b, str):
+            assert col_b != '', "column B name is empty string"
+
+        if isinstance(col_a, int):
+            assert col_a >= 0, "integer index for column a must be >= 0"
+        if isinstance(col_b, int):
+            assert col_b >= 0, "integer index for column b must be >= 0"
