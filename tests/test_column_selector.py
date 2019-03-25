@@ -1,9 +1,9 @@
 """Test the column selector."""
 
-import pytest
 import numpy as np
-import pandas as pd
 import numpy.testing as nt
+import pandas as pd
+import pytest
 
 import preprocessing as pp
 

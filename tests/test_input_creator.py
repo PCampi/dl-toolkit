@@ -1,6 +1,8 @@
+"""Test the RNN input creator module."""
+
 import numpy as np
-import pandas as pd
 import numpy.testing as nt
+import pandas as pd
 import pytest
 
 import rnn_input_creator as rn
