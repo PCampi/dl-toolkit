@@ -1,7 +1,7 @@
 """Transformers module."""
 
 from abc import ABC, abstractmethod
-from typing import List, Tuple, Type, TypeVar, Union
+from typing import List, Tuple, Type, TypeVar, Union, Callable
 
 import numpy as np
 import pandas as pd
@@ -88,70 +88,111 @@ class ColumnSelector(BaseEstimator, TransformerMixin, BasePandasTransformer):
         assert all(c != '' for c in columns)
 
 
-class PercentChangeTransformer(BaseEstimator, TransformerMixin,
-                               BasePandasTransformer):
+class TwoColumnsTransformer(BaseEstimator, TransformerMixin,
+                            BasePandasTransformer):
+    """Applies the supplied transformation to two columns, given by their names."""
+
+    def __init__(self,
+                 col_a: str,
+                 col_b: str,
+                 operation: Callable[[np.ndarray, np.ndarray], np.ndarray],
+                 safety_check_a: Callable[[np.ndarray], None] = None,
+                 safety_check_b: Callable[[np.ndarray], None] = None):
+        """Creates a new instance of this class.
+
+        Parameters
+        ---------- 
+        col_a: str
+            the name of the first column
+        col_b: str 
+            the name of the second column
+        operation: Callable[[np.ndarray, np.ndarray], np.ndarray]
+            the operation to be applied to the two columns. It must return a numpy array
+            of the same length
+        safety_check_a: Callable[[np.ndarray], None], optional
+            callable that will safety-check column A. Raises ValueError if errors, otherwise ok
+        safety_check_b: Callable[[np.ndarray], None], optional
+            callable that will safety-check column A. Raises ValueError if errors, otherwise ok
+        """
+        self.__check_init_params(col_a, col_b)
+
+        self.col_a = col_a
+        self.col_b = col_b
+        self.operation = operation
+
+        if safety_check_a:
+            self.safety_check_a = safety_check_a
+        if safety_check_b:
+            self.safety_check_b = safety_check_b
+
+    def fit(self, X: pd.DataFrame, y=None):
+        self.__check_columns(X)
+
+        a = X.loc[:, self.col_a].values
+        try:
+            self.safety_check_a(a)
+        except AttributeError:
+            pass
+
+        b = X.loc[:, self.col_b].values
+        try:
+            self.safety_check_b(b)
+        except AttributeError:
+            pass
+
+        return self
+
+    def transform(self, X: pd.DataFrame) -> np.ndarray:
+        a = X.loc[:, self.col_a].values
+        b = X.loc[:, self.col_b].values
+
+        result = self.operation(a, b)
+
+        return result
+
+    def __check_init_params(self, col_a, col_b):
+        if not isinstance(col_a, str) or not isinstance(col_b, str):
+            raise TypeError(
+                f"parameters col_a and col_b should be strings, got {type(col_a)} and {type(col_a)} instead"
+            )
+
+        if not col_a != '':
+            raise ValueError("parameter col_a is empty string")
+        if not col_b != '':
+            raise ValueError("parameter col_b is empty string")
+
+    def __check_columns(self, X: pd.DataFrame):
+        self.__check_column(X, self.col_a)
+        self.__check_column(X, self.col_b)
+
+    def __check_column(self, X: pd.DataFrame, column: str):
+        if not column in X.columns:
+            raise ValueError(f"column {column} is not in the dataframe")
+
+
+class PercentChangeTransformer(TwoColumnsTransformer):
     """Given two columns A and B, it computes the
     percentage difference between A and B, with respect to A.
 
     It means (B - A) / A, or (p_t+1 - p_t) / p_t
     """
 
-    def __init__(self, col_a: Union[str, int], col_b: Union[str, int]):
-        self.__check_init_params(col_a, col_b)
+    def __init__(self, col_a: str, col_b: str):
+        def operation(a: np.ndarray, b: np.ndarray):
+            return (b - a) / a
 
-        self.col_a = col_a
-        self.col_b = col_b
+        def safety(a: np.ndarray):
+            if not np.all(a != 0):
+                raise ValueError(
+                    "all elements of column A must be greater than 0")
+
+        super().__init__(col_a, col_b, operation, safety_check_a=safety)
 
     def fit(self, X: pd.DataFrame, y=None):
-        self._check_columns(X)
-
-        a = self._select_column(X, self.col_a)
-
-        assert np.all(
-            a != 0.0), "cannot use a column with a zero entry as divisor"
+        super().fit(X)
         return self
 
     def transform(self, X: pd.DataFrame) -> np.ndarray:
-        a = self._select_column(X, self.col_a)
-        b = self._select_column(X, self.col_b)
+        result = super().transform(X)
 
-        perc_change = (b - a) / a
-
-        return perc_change
-
-    def _check_columns(self, X: pd.DataFrame):
-        self._check_column(X, self.col_a)
-        self._check_column(X, self.col_b)
-
-    def _check_column(self, X: pd.DataFrame, column: Union[str, int]):
-        if isinstance(column, str):
-            assert column in X.columns, "column {column} is not in the dataframe"
-        elif isinstance(column, int):
-            assert column < len(
-                X.columns
-            ), f"column number {column} is out of bounds, there are only {len(X.columns)} columns"
-
-    def _select_column(self, X: pd.DataFrame,
-                       column: Union[str, int]) -> np.ndarray:
-        if isinstance(column, str):
-            return X.loc[:, column].values
-        elif isinstance(column, int):
-            return X.iloc[:, column].values
-
-    def __check_init_params(self, col_a, col_b):
-        assert isinstance(col_a, str) or \
-            isinstance(col_a, int) and \
-            not isinstance(col_a, bool), f"col_a must be a string or integer, got {type(col_a)}"
-        assert isinstance(col_b, str) or \
-            isinstance(col_b, int) and \
-            not isinstance(col_b, bool), f"col_a must be a string or integer, got {type(col_b)}"
-
-        if isinstance(col_a, str):
-            assert col_a != '', "column A name is empty string"
-        if isinstance(col_b, str):
-            assert col_b != '', "column B name is empty string"
-
-        if isinstance(col_a, int):
-            assert col_a >= 0, "integer index for column a must be >= 0"
-        if isinstance(col_b, int):
-            assert col_b >= 0, "integer index for column b must be >= 0"
+        return result

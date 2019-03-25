@@ -1,11 +1,10 @@
-"""Test the column selector."""
+"""Test the percentage column difference transformer."""
 
-import pytest
 import numpy as np
-import pandas as pd
 import numpy.testing as nt
+import pandas as pd
 import pandas.testing as pt
-from sklearn.exceptions import NotFittedError
+import pytest
 
 import preprocessing as pp
 
@@ -24,46 +23,25 @@ def data():
 
 
 def test_it_checks_init_params(data: pd.DataFrame):
-    with pytest.raises(AssertionError):
+    with pytest.raises(TypeError):
         pp.PercentChangeTransformer(True, 'age')
 
-    with pytest.raises(AssertionError):
+    with pytest.raises(TypeError):
         pp.PercentChangeTransformer(0, 1.4)
-
-    with pytest.raises(AssertionError):
-        pp.PercentChangeTransformer(1, -1)
-    with pytest.raises(AssertionError):
-        pp.PercentChangeTransformer(-2, 1)
 
 
 def test_it_checks_columns_in_df(data: pd.DataFrame):
-    with pytest.raises(AssertionError):
+    with pytest.raises(ValueError):
         pt = pp.PercentChangeTransformer('f1', 'target3')
         pt.fit(data)
 
-    with pytest.raises(AssertionError):
+    with pytest.raises(ValueError):
         pt = pp.PercentChangeTransformer('target3', 'f1')
         pt.fit(data)
 
-    l = len(data.columns)
-    with pytest.raises(AssertionError):
-        pt = pp.PercentChangeTransformer('f1', l)
-        pt.fit(data)
-
-    with pytest.raises(AssertionError):
-        pt = pp.PercentChangeTransformer(l, 'f1')
-        pt.fit(data)
-
-    with pytest.raises(AssertionError):
-        pt = pp.PercentChangeTransformer('f1', -1)
-        pt.fit(data)
-
-    with pytest.raises(AssertionError):
-        pt = pp.PercentChangeTransformer(-1, 'f1')
-
 
 def test_it_checks_no_zeros_in_a(data):
-    with pytest.raises(AssertionError):
+    with pytest.raises(ValueError):
         pt = pp.PercentChangeTransformer('f3', 'target1')
         pt.fit(data)
 
