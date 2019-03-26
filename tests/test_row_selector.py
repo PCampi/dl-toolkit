@@ -49,10 +49,11 @@ def test_it_raises_wrong_init_params(data):
     end = 3
     with pytest.raises(AssertionError):
         t = pp.RowSelector(start, end)
-        t.fit(data)
 
     with pytest.raises(AssertionError):
         pp.RowSelector(start='ciao', end=-1)
+
+    with pytest.raises(AssertionError):
         pp.RowSelector(start=1, end=True)
 
 

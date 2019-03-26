@@ -3,3 +3,4 @@ yapf
 mypy
 rope
 pytest
+pytest-cov
