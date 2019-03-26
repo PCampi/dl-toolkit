@@ -28,5 +28,12 @@ class BasePandasTransformer(BaseEstimator, TransformerMixin):
         self.check_X_type(X, X_type)
         self.check_y_type(y, y_type)
 
+    def _check_str(self, s: str, param_name: str):
+        if not isinstance(s, str):
+            raise TypeError(f"{param_name} should be a str, got {type(s)}")
+
+        if s == '':
+            raise ValueError(f"{param_name} cannot be the empty string")
+
     def _check_init_params(self, *args):
         raise NotImplementedError

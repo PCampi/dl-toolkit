@@ -21,6 +21,16 @@ def data() -> pd.DataFrame:
     return pd.DataFrame(data)
 
 
+def test_it_raises_wrong_str_init():
+    bp = pp.BasePandasTransformer()
+
+    with pytest.raises(TypeError):
+        bp._check_str(1, 'NAME')
+
+    with pytest.raises(ValueError):
+        bp._check_str('', 'NAME')
+
+
 def test_it_raises_wrong_X_type(data):
     bp = pp.BasePandasTransformer()
 
