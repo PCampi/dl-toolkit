@@ -5,7 +5,7 @@ import numpy.testing as nt
 import pandas as pd
 import pytest
 
-import rnn_input_creator as rn
+import src.rnn_input_creator as rn
 
 
 @pytest.fixture

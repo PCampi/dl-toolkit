@@ -6,7 +6,7 @@ import pandas as pd
 import pandas.testing as pt
 import pytest
 
-import preprocessing as pp
+import src.preprocessing as pp
 
 
 @pytest.fixture
