@@ -73,15 +73,10 @@ class TwoColumnsTransformer(BasePandasTransformer):
         return result
 
     def _check_init_params(self, col_a, col_b):
-        if not isinstance(col_a, str) or not isinstance(col_b, str):
-            raise TypeError(
-                f"parameters col_a and col_b should be strings, got {type(col_a)} and {type(col_a)} instead"
-            )
+        param_dict = {'col_a': col_a, 'col_b': col_b}
 
-        if col_a == '':
-            raise ValueError("parameter col_a is empty string")
-        if col_b == '':
-            raise ValueError("parameter col_b is empty string")
+        for param_name, param_value in param_dict.items():
+            self._check_str(param_value, param_name)
 
     def __check_columns(self, X: pd.DataFrame):
         self.__check_column(X, self.col_a)

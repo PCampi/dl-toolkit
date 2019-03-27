@@ -1,26 +1,25 @@
 """Transformers used just for IO, they do not operate on data."""
 
-from typing import List, Tuple, Type, TypeVar, Union, Callable
+import pandas as pd  # pragma: no cover
 
-import pandas as pd
-
-from .base import BasePandasTransformer
+from .base import BasePandasTransformer  # pragma: no cover
 
 
-class CsvSaver(BasePandasTransformer):
+class CsvSaver(BasePandasTransformer):  # pragma: no cover
     """Save the supplied DataFrame to a file."""
 
-    def __init__(self, filename: str):
+    def __init__(self, filename: str, write_index=False):
         self._check_init_params(filename)
 
         self.filename = filename
+        self.write_index = write_index
 
-    def transform(self, X: pd.DataFrame):
+    def transform(self, X: pd.DataFrame) -> pd.DataFrame:
         """Save a dataframe to a file.
 
         Warning: it overwrites the file if it already exists.
         """
-        X.to_csv(self.filename)
+        X.to_csv(self.filename, index=self.write_index)
         return X
 
     def _check_init_params(self, filename: str):
