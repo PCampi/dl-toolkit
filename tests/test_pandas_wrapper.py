@@ -36,6 +36,12 @@ def test_it_checks_init_params():
         pp.DataFrameWrapper(columns=['age', ''])
 
 
+def test_it_raises_on_wrong_type(data):
+    with pytest.raises(TypeError):
+        wrapper = pp.DataFrameWrapper(['f1', 'f2'])
+        wrapper.fit(data.loc[:, ['f1', 'f2']])
+
+
 def test_it_raises_on_wrong_dimensions():
     X = np.array([1, 2, 3, 4, 5])
     with pytest.raises(ValueError):

@@ -17,6 +17,9 @@ class DataFrameWrapper(BasePandasTransformer):
         self.columns = columns
 
     def fit(self, X: np.ndarray, y=None) -> Type['DataFrameWrapper']:
+        if not isinstance(X, np.ndarray):
+            raise TypeError(f"X must be a np.ndarray, got {type(X)}")
+
         if X.ndim == 1:
             raise ValueError(
                 f"X must have 2 dimensions, got array with shape {X.shape}")
