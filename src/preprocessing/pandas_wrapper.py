@@ -12,7 +12,7 @@ from .base import BasePandasTransformer
 class DataFrameWrapper(BasePandasTransformer):
     """Take some data and put it into a DataFrame."""
 
-    def __init__(self, columns: List[str] = None):
+    def __init__(self, columns: List[str]):
         self._check_init_params(columns)
         self.columns = columns
 
@@ -28,7 +28,7 @@ class DataFrameWrapper(BasePandasTransformer):
 
         return self
 
-    def transform(self, X: np.ndarray):
+    def transform(self, X: np.ndarray) -> pd.DataFrame:
         result = pd.DataFrame(data=X, columns=self.columns)
 
         return result
