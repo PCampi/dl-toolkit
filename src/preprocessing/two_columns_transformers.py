@@ -1,6 +1,6 @@
 """Transformers which operate on two columns."""
 
-from typing import List, Tuple, Type, TypeVar, Union, Callable
+from typing import List, Tuple, Type, TypeVar, Union, Callable, Sequence
 
 import numpy as np
 import pandas as pd
@@ -13,11 +13,10 @@ class TwoColumnsTransformer(BasePandasTransformer):
     """Applies the supplied transformation to two columns, given by their names."""
 
     def __init__(self,
-                 col_a: str,
-                 col_b: str,
+                 columns: Sequence[str],
                  operation: Callable[[np.ndarray, np.ndarray], np.ndarray],
-                 safety_check_a: Callable[[np.ndarray], None] = None,
-                 safety_check_b: Callable[[np.ndarray], None] = None):
+                 new_col_name: str,
+                 safety_checks=(None, None)):
         """Creates a new instance of this class.
 
         Parameters
@@ -29,62 +28,58 @@ class TwoColumnsTransformer(BasePandasTransformer):
         operation: Callable[[np.ndarray, np.ndarray], np.ndarray]
             the operation to be applied to the two columns. It must return a numpy array
             of the same length
-        safety_check_a: Callable[[np.ndarray], None], optional
-            callable that will safety-check column A. Raises ValueError if errors, otherwise ok
-        safety_check_b: Callable[[np.ndarray], None], optional
-            callable that will safety-check column A. Raises ValueError if errors, otherwise ok
+        new_col_name: str,
+            name of the newly created column for the output DataFrame
+        safety_checks: tuple of Callable[[np.ndarray], None], optional
+            callables that will safety-check column A and B.
+            Should raise ValueError if errors, otherwise ok.
+            If given, it must be of len = 2.
         """
-        self._check_init_params(col_a, col_b)
+        if not isinstance(columns, list):
+            raise TypeError(
+                f"columns must be a list of two str, not {type(columns)}")
 
-        self.col_a = col_a
-        self.col_b = col_b
+        if len(columns) != 2:
+            raise ValueError(f"len(columns) must be 2, is {len(columns)}")
+
+        if not isinstance(new_col_name, str):
+            raise TypeError(
+                f"new_col_name must be a str, not {type(new_col_name)}")
+        if new_col_name == '':
+            raise ValueError("must give a name to the new column")
+
+        super().__init__(columns)
+        self.col_a, self.col_b = columns
+        self.new_col_name = new_col_name
+
+        if operation is None:
+            raise TypeError("operation cannot be none")
         self.operation = operation
 
-        if safety_check_a:
-            self.safety_check_a = safety_check_a
-        if safety_check_b:
-            self.safety_check_b = safety_check_b
+        self.safety_check_a, self.safety_check_b = safety_checks
 
     def fit(self, X: pd.DataFrame, y=None) -> Type['TwoColumnsTransformer']:
-        self.check_types(X)
-        self.__check_columns(X)
+        self.prepare_to_fit(X)
 
         a = X.loc[:, self.col_a].values
-        try:
-            self.safety_check_a(a)
-        except AttributeError:
-            pass
+        if self.safety_check_a:
+            self.safety_check_a(a)  # pylint: disable=not-callable
 
         b = X.loc[:, self.col_b].values
-        try:
-            self.safety_check_b(b)
-        except AttributeError:
-            pass
+        if self.safety_check_b:
+            self.safety_check_b(b)  # pylint: disable=not-callable
 
         return self
 
-    def transform(self, X: pd.DataFrame) -> np.ndarray:
-        self.check_X_type(X)
+    def transform(self, X: pd.DataFrame) -> pd.DataFrame:
         a = X.loc[:, self.col_a].values
         b = X.loc[:, self.col_b].values
 
-        result = self.operation(a, b)
+        result_values = self.operation(a, b)
+        result = pd.DataFrame(
+            data=result_values, index=self.index_, columns=[self.new_col_name])
 
         return result
-
-    def _check_init_params(self, col_a, col_b):
-        param_dict = {'col_a': col_a, 'col_b': col_b}
-
-        for param_name, param_value in param_dict.items():
-            self._check_str(param_value, param_name)
-
-    def __check_columns(self, X: pd.DataFrame):
-        self.__check_column(X, self.col_a)
-        self.__check_column(X, self.col_b)
-
-    def __check_column(self, X: pd.DataFrame, column: str):
-        if not column in X.columns:
-            raise ValueError(f"column {column} is not in the dataframe")
 
 
 class PercentChangeTransformer(TwoColumnsTransformer):
@@ -94,7 +89,7 @@ class PercentChangeTransformer(TwoColumnsTransformer):
     It means (B - A) / A, or (p_t+1 - p_t) / p_t
     """
 
-    def __init__(self, col_a: str, col_b: str):
+    def __init__(self, columns: Sequence[str]):
         def operation(a: np.ndarray, b: np.ndarray):
             return (b - a) / a
 
@@ -103,13 +98,14 @@ class PercentChangeTransformer(TwoColumnsTransformer):
                 raise ValueError(
                     "all elements of column A must be greater than 0")
 
-        super().__init__(col_a, col_b, operation, safety_check_a=safety)
+        new_col_name = f"delta_percent_{columns[1]}_{columns[0]}"
+        super().__init__(columns, operation, new_col_name, (safety, None))
 
-    def fit(self, X: pd.DataFrame, y=None):
+    def fit(self, X: pd.DataFrame, y=None) -> Type['PercentChangeTransformer']:
         super().fit(X)
         return self
 
-    def transform(self, X: pd.DataFrame) -> np.ndarray:
+    def transform(self, X: pd.DataFrame) -> pd.DataFrame:
         result = super().transform(X)
 
         return result

@@ -1,6 +1,6 @@
 """Transformers which select either rows of columns."""
 
-from typing import List, Tuple, Type, TypeVar, Union, Callable
+from typing import List, Tuple, Type, TypeVar, Union, Callable, Sequence
 
 import numpy as np
 import pandas as pd
@@ -22,7 +22,7 @@ class RowSelector(BasePandasTransformer):
 
     def fit(self, X: pd.DataFrame, y=None) -> Type['RowSelector']:
         """Select some rows from the dataframe."""
-        self.check_types(X)
+        self._check_types(X)
 
         n_rows = X.shape[0]
         assert self.start < n_rows, "start cannot be larger than data length"
@@ -38,10 +38,19 @@ class RowSelector(BasePandasTransformer):
             return X.iloc[self.start:self.end, :]
 
     def _check_init_params(self, start, end):
-        assert isinstance(start,
-                          int), f"Start must be an int, got {type(start)}"
-        assert isinstance(end, int), f"End must be an int, got {type(end)}"
-        assert start >= -1, f"start must be greater than or equal to -1, got {start}"
+        if isinstance(start, bool):
+            raise TypeError("start cannot be a bool")
+        if isinstance(end, bool):
+            raise TypeError("end cannot be a bool")
+
+        if not isinstance(start, int):
+            raise TypeError(f"start must be an int, got {type(start)}")
+        if not isinstance(end, int):
+            raise TypeError(f"end must be an int, got {type(end)}")
+
+        if not start >= -1:
+            raise ValueError(
+                f"start must be greater than or equal to -1, got {start}")
 
         if start == -1:
             assert end == -1, f"if start is -1, then end should also be -1, got {end}"
@@ -52,23 +61,13 @@ class RowSelector(BasePandasTransformer):
 class ColumnSelector(BasePandasTransformer):
     """Select some columns of the data."""
 
-    def __init__(self, columns=List[str]):
-        self._check_init_params(columns)
-        self.columns = columns
+    def __init__(self, columns=Sequence[str]):
+        super().__init__(columns)
 
     def fit(self, X: pd.DataFrame, y=None) -> Type['ColumnSelector']:
-        assert all(c in X.columns
-                   for c in self.columns), "not all columns are in the data!"
+        self.prepare_to_fit(X)
+
         return self
 
     def transform(self, X: pd.DataFrame) -> pd.DataFrame:
         return X.loc[:, self.columns]
-
-    def _check_init_params(self, columns):
-        assert isinstance(
-            columns,
-            list), f"columns should be a list of str, got {type(columns)}"
-        assert len(columns) >= 1, "at least a column name should be provided"
-        assert all(isinstance(c, str)
-                   for c in columns), "some columns entry is not a str"
-        assert all(c != '' for c in columns)
