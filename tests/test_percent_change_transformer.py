@@ -24,32 +24,34 @@ def data():
 
 def test_it_checks_init_params(data: pd.DataFrame):
     with pytest.raises(TypeError):
-        pp.PercentChangeTransformer(True, 'age')
+        pp.PercentChangeTransformer((True, 'age'))
 
     with pytest.raises(TypeError):
-        pp.PercentChangeTransformer(0, 1.4)
+        pp.PercentChangeTransformer((0, 1.4))
 
 
 def test_it_checks_columns_in_df(data: pd.DataFrame):
     with pytest.raises(ValueError):
-        pt = pp.PercentChangeTransformer('f1', 'target3')
+        pt = pp.PercentChangeTransformer(['f1', 'target3'])
         pt.fit(data)
 
     with pytest.raises(ValueError):
-        pt = pp.PercentChangeTransformer('target3', 'f1')
+        pt = pp.PercentChangeTransformer(['target3', 'f1'])
         pt.fit(data)
 
 
 def test_it_checks_no_zeros_in_a(data):
     with pytest.raises(ValueError):
-        pt = pp.PercentChangeTransformer('f3', 'target1')
+        pt = pp.PercentChangeTransformer(['f3', 'target1'])
         pt.fit(data)
 
 
 def test_it_transforms_data(data: pd.DataFrame):
-    pt = pp.PercentChangeTransformer('f2', 'f1')
+    pt = pp.PercentChangeTransformer(['f2', 'f1'])
     result = pt.fit_transform(data)
 
-    expected = np.array([0.0, 0.1, -0.02, 14.0, -0.7])
+    expected = pd.DataFrame(
+        data=np.array([0.0, 0.1, -0.02, 14.0, -0.7]),
+        columns=['delta_percent_f1_f2'])
 
     nt.assert_array_equal(result, expected)

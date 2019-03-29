@@ -21,34 +21,52 @@ def data() -> pd.DataFrame:
     return pd.DataFrame(data)
 
 
-def test_it_raises_wrong_str_init():
-    bp = pp.BasePandasTransformer()
+def test_it_raises_wrong_init_params():
+    with pytest.raises(TypeError):
+        pp.BasePandasTransformer(None)
 
     with pytest.raises(TypeError):
-        bp._check_str(1, 'NAME')
+        pp.BasePandasTransformer(1)
 
     with pytest.raises(ValueError):
-        bp._check_str('', 'NAME')
+        pp.BasePandasTransformer('')
+
+    with pytest.raises(ValueError):
+        pp.BasePandasTransformer([''])
+
+    with pytest.raises(ValueError):
+        pp.BasePandasTransformer(['f1', ''])
+
+
+def test_it_converts_init_columns():
+    bp = pp.BasePandasTransformer(('f1', 'f2'))
+    assert bp.columns == ['f1', 'f2']
+
+    bp = pp.BasePandasTransformer('f1')
+    assert bp.columns == ['f1']
+
+    bp = pp.BasePandasTransformer(('f1'))
+    assert bp.columns == ['f1']
 
 
 def test_it_raises_wrong_X_type(data):
-    bp = pp.BasePandasTransformer()
+    bp = pp.BasePandasTransformer(('f1'))
 
     wrong_X = data.values
     with pytest.raises(TypeError):
-        bp.check_types(wrong_X)
+        bp.prepare_to_fit(wrong_X)
 
 
 def test_it_raises_wrong_y_type(data):
-    bp = pp.BasePandasTransformer()
+    bp = pp.BasePandasTransformer('f1')
 
     wrong_y = data['f1'].values.tolist()
     with pytest.raises(TypeError):
-        bp.check_types(data, wrong_y, y_type=np.ndarray)
+        bp.prepare_to_fit(data, wrong_y)
 
 
-def test_it_raises_not_implemented(data):
-    bp = pp.BasePandasTransformer()
+def test_it_prepares_to_fit(data):
+    bp = pp.BasePandasTransformer('f1')
+    bp.prepare_to_fit(data)
 
-    with pytest.raises(NotImplementedError):
-        bp._check_init_params(data)
+    pt.assert_index_equal(bp.index_, data.index)

@@ -20,6 +20,26 @@ def data():
     return pd.DataFrame(data)
 
 
+def test_it_checks_data(data):
+    with pytest.raises(TypeError):
+        rn.create_dataset(data, ('f1'), 3, ['target1'])
+
+    with pytest.raises(TypeError):
+        rn.create_dataset(data, 'f1', 3, ['target1'])
+
+    with pytest.raises(TypeError):
+        rn.create_dataset(data, ['f1', 10], 3, ['target1'])
+
+    with pytest.raises(TypeError):
+        rn.create_dataset(data, ['f1'], 3, 'target1')
+
+    with pytest.raises(TypeError):
+        rn.create_dataset(data, ['f1'], 3, ('target1'))
+
+    with pytest.raises(TypeError):
+        rn.create_dataset(data, ['f1'], 3, [1, 2, 3])
+
+
 def test_single_target(data):
     x_hat, y_hat = rn.create_dataset(data, ['f1', 'f2'], 3, ['target1'])
 
