@@ -118,7 +118,7 @@ class TwoColPercentDiffTransformer(TwoColumnsTransformer):
         super().__init__(columns, operation, new_col_name, (safety, None))
 
     def fit(self, X: pd.DataFrame,
-            y=None) -> Type['TwoColPercentChangeTransformer']:
+            y=None) -> Type['TwoColPercentDiffTransformer']:
         super().fit(X)
         return self
 
