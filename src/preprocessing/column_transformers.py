@@ -30,6 +30,68 @@ class LogTransformer(BasePandasTransformer):
         return np.exp(X.loc[:, self.columns])
 
 
+class Log10Transformer(BasePandasTransformer):
+    """Apply base-10 logarithm to a column."""
+
+    def fit(self, X: pd.DataFrame, y=None):
+        self.prepare_to_fit(X)
+
+        if not np.all(X.loc[:, self.columns] > 0):
+            raise ValueError(
+                "cannot compute the log of zero, there are some zero entries in X"
+            )
+
+        return self
+
+    def transform(self, X: pd.DataFrame) -> pd.DataFrame:
+        return np.log10(X.loc[:, self.columns])
+
+    def inverse_transform(self, X: pd.DataFrame) -> pd.DataFrame:
+        return np.power(10, X.loc[:, self.columns])
+
+
+class PercentChangeTransformer(BasePandasTransformer):
+    """Percent change over columns, starting from the first element."""
+
+    def __init__(self, columns: Sequence[str], periods=1):
+        """Percent change over columns, using periods steps between data points.
+
+        Parameters
+        ----------
+        column: Sequence[str]
+            the columns on which to compute the change
+        periods: int
+            number of periods between data points to use for computing the change
+        """
+        if isinstance(periods, bool):
+            raise TypeError("cannot use bool as periods")
+        if not isinstance(periods, int):
+            raise TypeError(f"periods must be int, not {type(periods)}")
+
+        if periods < 1:
+            raise ValueError(f"periods must be >= 1, got {periods}")
+
+        super().__init__(columns)
+        self.periods = periods
+
+    def fit(self, X: pd.DataFrame, y=None) -> Type['PercentChangeTransformer']:
+        self.prepare_to_fit(X)
+
+        if not np.all(X.loc[:, self.columns].values > 0.0):
+            raise ValueError("cannot divide by zero and data contains zeros")
+
+        return self
+
+    def transform(self, X: pd.DataFrame) -> pd.DataFrame:
+        result = X.loc[:, self.columns].pct_change(
+            periods=self.periods, fill_method='pad')
+
+        new_cols = [f"{old_col}_perc_change" for old_col in result.columns]
+        result.columns = new_cols
+
+        return result
+
+
 class MovingAverageTransformer(BasePandasTransformer):
     """Moving average."""
 

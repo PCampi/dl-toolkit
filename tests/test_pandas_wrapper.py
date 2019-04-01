@@ -23,10 +23,7 @@ def data():
 
 
 def test_it_checks_init_params():
-    with pytest.raises(TypeError):
-        pp.DataFrameWrapper(columns='age')
-
-    with pytest.raises(TypeError):
+    with pytest.raises(ValueError):
         pp.DataFrameWrapper(columns='')
 
     with pytest.raises(ValueError):

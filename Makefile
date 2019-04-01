@@ -15,7 +15,10 @@ test: clean-pyc
 	py.test --verbose --color=yes $(TEST_PATH)
 
 coverage:
-	coverage run --source $(SRC_FOLDER) -m pytest && coverage html && open htmlcov/index.html
+	coverage run --source $(SRC_FOLDER) -m pytest && coverage html
+
+coverage-view: coverage
+	open htmlcov/index.html
 
 clean-coverage:
 	rm -r htmlcov

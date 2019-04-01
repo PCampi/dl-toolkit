@@ -17,14 +17,12 @@ class TwoColumnsTransformer(BasePandasTransformer):
                  operation: Callable[[np.ndarray, np.ndarray], np.ndarray],
                  new_col_name: str,
                  safety_checks=(None, None)):
-        """Creates a new instance of this class.
+        """Transformer which operates on two columns.
 
         Parameters
         ---------- 
-        col_a: str
-            the name of the first column
-        col_b: str 
-            the name of the second column
+        columns: List[str]
+            len two list of str, containing the column names
         operation: Callable[[np.ndarray, np.ndarray], np.ndarray]
             the operation to be applied to the two columns. It must return a numpy array
             of the same length
@@ -82,7 +80,7 @@ class TwoColumnsTransformer(BasePandasTransformer):
         return result
 
 
-class PercentChangeTransformer(TwoColumnsTransformer):
+class TwoColPercentDiffTransformer(TwoColumnsTransformer):
     """Given two columns A and B, it computes the
     percentage difference between A and B, with respect to A.
 
@@ -90,6 +88,24 @@ class PercentChangeTransformer(TwoColumnsTransformer):
     """
 
     def __init__(self, columns: Sequence[str]):
+        """Transformer computing the percent difference between two columns,
+        with respect to the first, e.g. (B - A) / A
+
+        Parameters
+        ---------- 
+        columns: Sequence[str]
+            len two list or tuple of str, containing the column names
+        operation: Callable[[np.ndarray, np.ndarray], np.ndarray]
+            the operation to be applied to the two columns. It must return a numpy array
+            of the same length
+        new_col_name: str,
+            name of the newly created column for the output DataFrame
+        safety_checks: tuple of Callable[[np.ndarray], None], optional
+            callables that will safety-check column A and B.
+            Should raise ValueError if errors, otherwise ok.
+            If given, it must be of len = 2.
+        """
+
         def operation(a: np.ndarray, b: np.ndarray):
             return (b - a) / a
 
@@ -101,7 +117,8 @@ class PercentChangeTransformer(TwoColumnsTransformer):
         new_col_name = f"delta_percent_{columns[1]}_{columns[0]}"
         super().__init__(columns, operation, new_col_name, (safety, None))
 
-    def fit(self, X: pd.DataFrame, y=None) -> Type['PercentChangeTransformer']:
+    def fit(self, X: pd.DataFrame,
+            y=None) -> Type['TwoColPercentChangeTransformer']:
         super().fit(X)
         return self
 

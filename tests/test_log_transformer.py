@@ -28,10 +28,19 @@ def test_it_raises_wrong_init_params(data):
     with pytest.raises(ValueError):
         pp.LogTransformer('')
 
+    with pytest.raises(TypeError):
+        pp.Log10Transformer(1)
+
+    with pytest.raises(ValueError):
+        pp.Log10Transformer('')
+
 
 def test_it_raises_log_zero(data):
     lt = pp.LogTransformer('f1')
+    with pytest.raises(ValueError):
+        lt.fit_transform(data)
 
+    lt = pp.Log10Transformer('f1')
     with pytest.raises(ValueError):
         lt.fit_transform(data)
 
@@ -45,9 +54,26 @@ def test_it_makes_log(data):
     nt.assert_array_equal(result.values, expected.values)
     pt.assert_frame_equal(result, expected)
 
+    lt = pp.Log10Transformer('f2')
+
+    result = lt.fit(data).transform(data)
+    expected: pd.DataFrame = np.log10(data.loc[:, ['f2']])
+
+    nt.assert_array_equal(result.values, expected.values)
+    pt.assert_frame_equal(result, expected)
+
 
 def test_it_makes_inverse_transform(data):
     lt = pp.LogTransformer('f2')
+
+    log = lt.fit_transform(data)
+    result = lt.inverse_transform(log)
+    expected = data.loc[:, ['f2']].astype(np.float)
+
+    nt.assert_almost_equal(result.values, expected.values)
+    pt.assert_frame_equal(result, expected)
+
+    lt = pp.Log10Transformer('f2')
 
     log = lt.fit_transform(data)
     result = lt.inverse_transform(log)
