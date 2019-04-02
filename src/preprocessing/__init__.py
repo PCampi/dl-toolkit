@@ -5,3 +5,4 @@ from .selection import ColumnSelector, RowSelector
 from .column_transformers import LogTransformer, Log10Transformer, MovingAverageTransformer, PercentChangeTransformer
 from .two_columns_transformers import TwoColumnsTransformer, TwoColPercentDiffTransformer
 from .pandas_wrapper import DataFrameWrapper, PandasFeatureUnion, SparseNotAllowedError
+from .price_transformation import LogReturnsTransformer
