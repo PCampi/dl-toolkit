@@ -10,6 +10,7 @@ clean-build:
 	rm -fr build/
 	rm -fr dist/
 	rm -fr *.egg-info
+	rm -r $(SRC_FOLDER)/*.egg-info
 
 test: clean-pyc
 	py.test --verbose --color=yes $(TEST_PATH)

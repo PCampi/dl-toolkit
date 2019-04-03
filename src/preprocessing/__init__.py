@@ -6,3 +6,5 @@ from .column_transformers import LogTransformer, Log10Transformer, MovingAverage
 from .two_columns_transformers import TwoColumnsTransformer, TwoColPercentDiffTransformer
 from .pandas_wrapper import DataFrameWrapper, PandasFeatureUnion, SparseNotAllowedError
 from .price_transformation import LogReturnsTransformer
+
+from . import technical_analysis as ta
