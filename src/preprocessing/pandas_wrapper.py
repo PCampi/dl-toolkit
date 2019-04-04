@@ -22,8 +22,9 @@ class SparseNotAllowedError(Exception):
 class DataFrameWrapper(BasePandasTransformer):
     """Take some data and put it into a DataFrame."""
 
-    def __init__(self, columns: List[str]):
+    def __init__(self, columns: List[str], index=None):
         super().__init__(columns)
+        self.index = index
 
     def fit(self, X: np.ndarray, y=None) -> Type['DataFrameWrapper']:
         if not isinstance(X, np.ndarray):
@@ -35,15 +36,22 @@ class DataFrameWrapper(BasePandasTransformer):
 
         if not X.shape[1] == len(self.columns):
             raise ValueError(
-                f"declared columns length and data.shape[1] do not match ([{len(self.columns)}] / [{X.shape[1]}])"
+                f"declared columns length ({len(self.columns)}) and data.shape[1] ({X.shape[1]}) do not match"
             )
 
         return self
 
     def transform(self, X: np.ndarray) -> pd.DataFrame:
-        result = pd.DataFrame(data=X, columns=self.columns)
-
-        return result
+        if self.index is not None:
+            if not len(self.index) == X.shape[0]:
+                raise ValueError(
+                    f"provided index len ({len(self.index)}) does not match data len ({X.shape[0]})"
+                )
+            else:
+                return pd.DataFrame(
+                    data=X, columns=self.columns, index=self.index)
+        else:
+            return pd.DataFrame(data=X, columns=self.columns)
 
 
 class PandasFeatureUnion(FeatureUnion):

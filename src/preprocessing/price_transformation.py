@@ -9,10 +9,10 @@ from .base import BasePandasTransformer
 
 
 class LogReturnsTransformer(BasePandasTransformer):
-    """Take the log return of a single column."""
+    """Take the log return."""
 
-    def __init__(self, column: str):
-        super().__init__(column)
+    def __init__(self, columns: Sequence[str]):
+        super().__init__(columns)
 
     def fit(self, X: pd.DataFrame, y=None) -> Type['LogReturnsTransformer']:
         super().prepare_to_fit(X)
