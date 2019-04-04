@@ -23,16 +23,16 @@ def data():
 
 def test_it_raises_wrong_init():
     with pytest.raises(ValueError):
-        pp.LogReturnsTransformer('')
+        pp.LogReturns('')
 
     with pytest.raises(TypeError):
-        pp.LogReturnsTransformer(1)
+        pp.LogReturns(1)
 
     with pytest.raises(TypeError):
-        pp.LogReturnsTransformer(False)
+        pp.LogReturns(False)
 
     with pytest.raises(TypeError):
-        pp.LogReturnsTransformer(0.52)
+        pp.LogReturns(0.52)
 
 
 def test_it_computes_returns(data):
@@ -40,7 +40,7 @@ def test_it_computes_returns(data):
     ground = ground_log.diff(periods=1)
     ground.columns = ['f2_log_ret', 'target1_log_ret']
 
-    lr_transformer = pp.LogReturnsTransformer(['f2', 'target1'])
+    lr_transformer = pp.LogReturns(['f2', 'target1'])
     result = lr_transformer.fit_transform(data)
 
     pt.assert_frame_equal(ground, result)

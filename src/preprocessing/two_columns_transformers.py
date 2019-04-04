@@ -59,12 +59,12 @@ class TwoColumnsTransformer(BasePandasTransformer):
     def fit(self, X: pd.DataFrame, y=None) -> Type['TwoColumnsTransformer']:
         self.prepare_to_fit(X)
 
-        a = X.loc[:, self.col_a].values
         if self.safety_check_a:
+            a = X.loc[:, self.col_a].values
             self.safety_check_a(a)  # pylint: disable=not-callable
 
-        b = X.loc[:, self.col_b].values
         if self.safety_check_b:
+            b = X.loc[:, self.col_b].values
             self.safety_check_b(b)  # pylint: disable=not-callable
 
         return self
