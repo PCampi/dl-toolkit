@@ -36,11 +36,11 @@ def test_it_raises_wrong_init():
 
 
 def test_it_computes_returns(data):
-    ground_log: pd.DataFrame = np.log(data.loc[:, ['f2']])
+    ground_log: pd.DataFrame = np.log(data.loc[:, ['f2', 'target1']])
     ground = ground_log.diff(periods=1)
-    ground.columns = ['f2_log_ret']
+    ground.columns = ['f2_log_ret', 'target1_log_ret']
 
-    lr_transformer = pp.LogReturnsTransformer('f2')
+    lr_transformer = pp.LogReturnsTransformer(['f2', 'target1'])
     result = lr_transformer.fit_transform(data)
 
     pt.assert_frame_equal(ground, result)
