@@ -84,7 +84,7 @@ class PercentChangeTransformer(BasePandasTransformer):
 
     def transform(self, X: pd.DataFrame) -> pd.DataFrame:
         result = X.loc[:, self.columns].pct_change(
-            periods=self.periods, fill_method='pad')
+            periods=self.periods, fill_method=None)
 
         new_cols = [f"{old_col}_perc_change" for old_col in result.columns]
         result.columns = new_cols

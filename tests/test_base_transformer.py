@@ -38,7 +38,7 @@ def test_it_raises_wrong_init_params():
         pp.BasePandasTransformer(['f1', ''])
 
 
-def test_it_converts_init_columns():
+def test_it_converts_init_columns(data: pd.DataFrame):
     bp = pp.BasePandasTransformer(('f1', 'f2'))
     assert bp.columns == ['f1', 'f2']
 
@@ -47,6 +47,10 @@ def test_it_converts_init_columns():
 
     bp = pp.BasePandasTransformer(('f1'))
     assert bp.columns == ['f1']
+
+    bp = pp.BasePandasTransformer(data.columns)
+    assert isinstance(bp.columns, list)
+    assert bp.columns == data.columns.tolist()
 
 
 def test_it_raises_wrong_X_type(data):

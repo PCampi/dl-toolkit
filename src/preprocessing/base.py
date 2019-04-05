@@ -46,6 +46,8 @@ class BasePandasTransformer(BaseEstimator, TransformerMixin):
             return [*columns]
         elif isinstance(columns, str):
             return [columns]
+        elif isinstance(columns, pd.Index):
+            return columns.tolist()
         else:
             raise TypeError(
                 f"column parameter must be a Sequence[str], not {type(columns)}"

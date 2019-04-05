@@ -47,6 +47,6 @@ class PercentReturns(BasePandasTransformer):
         return self
 
     def transform(self, X: pd.DataFrame) -> pd.DataFrame:
-        result = X.loc[:, self.columns].pct_change(periods=1)
+        result = X.loc[:, self.columns].pct_change(periods=1, fill_method=None)
 
         return result
