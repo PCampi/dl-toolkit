@@ -4,39 +4,37 @@ import numpy as np
 import pandas as pd
 
 import src.preprocessing.divide_dataset as dd
+import src.preprocessing as opp
 
 if __name__ == "__main__":
-    train_len = 250
-    test_len = 250
-    bptt = 25
+    study_len = 1000
+    train_len = 750
+    bptt = 240
 
-    data = pd.read_csv('./test_data/datesAdjustedPrices.csv')
-
-    data = data.drop(columns=['indexId', 'open', 'high', 'low'])
+    data = pd.read_csv('./test_data/datesAdjustedPrices.csv'
+                       ).loc[:, ['companyId', 'date', 'close']]
     data.loc[:, 'date'] = pd.to_datetime(data.loc[:, 'date'], format="%Y%m%d")
 
-    date_divider = dd.TimeseriesDateIntervalComputer(
-        'date',
-        period_len=train_len + test_len,
-        period_shift=test_len,
-        train_len=train_len)
-
-    all_dates, train_periods, test_periods = date_divider.fit_transform(data)
-
-    ts: pd.DataFrame = data.pivot(
+    tmp: pd.DataFrame = data.pivot(
         index='date', columns='companyId', values='close').replace(
             -1.0, np.nan)
 
-    Xs = []
-    ys = []
-    n = len(train_periods)
+    # calculate percent returns on the whole dataset
+    ts: pd.DataFrame = opp.PercentReturns(tmp.columns).fit_transform(tmp)
+    ts = ts.iloc[1:, :]  # delete first row of all NaN
 
-    for i, (train_period, test_period) in enumerate(
-            zip(train_periods, test_periods)):
-        print(f"\nPeriod {i + 1}")
-        X, y = dd.make_ds_in_study_period(ts, train_period, test_period, bptt)
-        Xs.append(X)
-        ys.append(y)
+    period = 0
+    first_slice: pd.DataFrame = ts.iloc[period * study_len:(period + 1) *
+                                        study_len, :]
 
-    X_train = np.concatenate(Xs)
-    y_train = np.concatenate(ys)
+    first_slice = opp.StandardScaler(
+        first_slice.columns).fit_transform(first_slice)
+
+    ds_creator = dd.DatasetCreator(
+        ts.columns,
+        train_len=train_len,
+        bptt=bptt,
+        train_valid_split=0.2,
+        interactive=True)
+
+    X_train, y_train, X_test, y_test = ds_creator.fit_transform(first_slice)
