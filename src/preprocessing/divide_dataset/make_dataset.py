@@ -1,9 +1,10 @@
 """Make a dataset for a study."""
 
-from typing import Sequence, Type
+from typing import List, Sequence, Type, Tuple, Union
 
 import numpy as np
 import pandas as pd
+from sklearn.model_selection import train_test_split
 import tqdm
 
 from src import preprocessing as opp
@@ -14,8 +15,10 @@ class DatasetCreator(opp.BasePandasTransformer):
                  columns: Sequence[str],
                  train_len=750,
                  bptt=240,
-                 train_valid_split=0.2,
-                 interactive=True):
+                 valid_percent=0.0,
+                 shuffle_in_time=False,
+                 shuffle_columns=False,
+                 interactive=False):
         """Make a dataset inside a study period,
         starting from a pd.DataFrame ordered by index.
         
@@ -25,10 +28,16 @@ class DatasetCreator(opp.BasePandasTransformer):
         inside the training period we move from the beginning onwards in blocks
         of window_len days.
         """
+        self.__check_init_params(train_len, bptt, valid_percent,
+                                 shuffle_in_time, shuffle_columns, interactive)
+
         super().__init__(columns)
+
         self.train_len = train_len
         self.bptt = bptt
-        self.train_valid_split = train_valid_split
+        self.valid_percent = valid_percent
+        self.shuffle_in_time = shuffle_in_time
+        self.shuffle_columns = shuffle_columns
         self.interactive = interactive
 
     def fit(self, X: pd.DataFrame, y=None) -> Type['DatasetCreator']:
@@ -55,97 +64,221 @@ class DatasetCreator(opp.BasePandasTransformer):
         return self
 
     def transform(self, X: pd.DataFrame):
-        """Get the training and testing data.
+        """Get the training and testing data, optionally also the validation data.
 
         IMPORTANT: the X variable should contain all the data for a
         **single** study period and not be longer, otherwise all indexes get messed up.
+
+        In practice, X shall be a window of len = study_len inside the whole data,
+        so that we can index it starting from 0 and get all indexes right.
         """
         final_data = X.loc[:, self.companies_included]
-
-        # declare the X and y
-        X_train, y_train = self._get_slice(final_data, self.bptt, self.bptt)
-        if X_train is None or y_train is None:
-            raise ValueError("initial X_tarin and y_train are empty!")
-
-        # training period
-        # for every slice of `bptt` days, i is the end index
-        for_range = range(self.bptt + 1, self.train_len - 1)
-        if self.interactive:
-            for_range = tqdm.tqdm(for_range)
-
-        for i in for_range:
-            tmp_X, tmp_y = self._get_slice(final_data, i, self.bptt)
-
-            X_train = np.concatenate((X_train, tmp_X))
-            y_train = np.concatenate((y_train, tmp_y))
-
-        # testing period
-        # declare the X and y
-        X_test, y_test = self._get_slice(final_data, self.train_len, self.bptt)
-        if X_train is None or y_train is None:
-            raise ValueError("initial X_tarin and y_train are empty!")
-        # for every slice of `bptt` days, i is the end index
         n = final_data.shape[0]
 
-        for_range = range(self.train_len + 1, n)
+        # TRAINING phase
+        if self.valid_percent:
+            X_train, X_valid, y_train, y_valid = self.subset_with_validation(
+                data=final_data,
+                start_index=self.bptt,
+                end_index=self.train_len - 1,
+                bptt=self.bptt,
+                shuffle_columns=self.shuffle_columns,
+                valid_percent=self.valid_percent)
+
+            assert X_valid.shape[0] == y_valid.shape[0]
+        else:
+            X_train, y_train = self.subset_no_validation(
+                data=final_data,
+                start_index=self.bptt,
+                end_index=self.train_len - 1,
+                bptt=self.bptt,
+                shuffle_columns=self.shuffle_columns)
+
+        # TESTING phase
+        X_test, y_test = self.subset_no_validation(
+            data=final_data,
+            start_index=self.train_len,
+            end_index=n,
+            bptt=self.bptt,
+            shuffle_columns=False)
+
+        # check dimensions
+        assert X_train.shape[0] == y_train.shape[0]
+        assert X_test.shape[0] == y_test.shape[0]
+
+        # if shuffle_in_time, then shuffle *only* the training set
+        if self.shuffle_in_time:
+            n_train_samples, _, _ = X_train.shape
+            permuted_indexes = np.random.permutation(n_train_samples)
+            X_train = X_train[permuted_indexes]
+            y_train = y_train[permuted_indexes]
+
+        # return the computed data
+        if self.valid_percent:
+            return X_train, X_valid, X_test, y_train, y_valid, y_test
+        else:
+            return X_train, X_test, y_train, y_test
+
+    def subset_no_validation(self, data: pd.DataFrame, start_index, end_index,
+                             bptt, shuffle_columns):
+        """Get a subset of the data with the rolling window method starting
+        from "start_index", with a bptt of "bptt", and no validation data.
+        """
+        X_lst: List[np.ndarray] = []
+        y_lst: List[np.ndarray] = []
+
+        # for every slice i is the end index
+        for_range = range(start_index, end_index)
         if self.interactive:
             for_range = tqdm.tqdm(for_range)
 
         for i in for_range:
-            tmp_X, tmp_y = self._get_slice(final_data, i, self.bptt)
+            # slice_X has shape (n_companies, bptt)
+            # slice_y has shape (n_companies)
+            slice_X, slice_y = self._get_slice(
+                data=data,
+                start_index=i,
+                bptt=bptt,
+                shuffle_columns=shuffle_columns)
 
-            X_test = np.concatenate((X_test, tmp_X))
-            y_test = np.concatenate((y_test, tmp_y))
+            # append to the resulting lists
+            X_lst.append(slice_X)
+            y_lst.append(slice_y)
 
-        return X_train, y_train, X_test, y_test
+        X: np.ndarray = np.concatenate(X_lst)  # shape=(n_train_samples, bptt)
 
-    def _get_slice(self, data: pd.DataFrame, start_index: int, bptt: int):
-        # the first bptt elements of the slice are the X, the last one
-        # is the target y
-        rolling_slice: pd.DataFrame = data.iloc[start_index -
-                                                bptt:start_index + 1, :]
-        start_time = rolling_slice.index[0]
+        n_samples, n_columns = X.shape
+        assert n_columns == bptt
+        X = X.reshape(n_samples, n_columns, -1)
 
-        # drop companies that don't have all points in this slice
-        rolling_slice = rolling_slice.dropna(axis='columns', how='any')
-        r, c = rolling_slice.shape
-
-        if r == 0 or c == 0:
-            print(
-                f"\n\nWARNING: r={r} and c={c} in slice starting at time={start_time}"
-            )
-            return None, None
-
-        X = rolling_slice.iloc[:-1, :].values.transpose().reshape(c, r - 1, -1)
-        # TODO: fix this using median instead of just y, and assign +1 and 0 classes
-        # if the value is above or below the slice median.
-        # NOTE: the median is computed on the whole study period, or for a single bptt pass?
-        y = rolling_slice.iloc[-1, :].values
+        y: np.ndarray = np.concatenate(y_lst)
 
         return X, y
 
+    def subset_with_validation(self, data: pd.DataFrame, start_index,
+                               end_index, bptt, shuffle_columns,
+                               valid_percent: float):
+        """Get a subset of the data with the rolling window method starting
+        from "start_index", with a bptt of "bptt", and with validation data
+        if valid_percent with respect to the data between start_index and
+        end_index.
+        """
+        X_t: List[np.ndarray] = []
+        X_v: List[np.ndarray] = []
+        y_t: List[np.ndarray] = []
+        y_v: List[np.ndarray] = []
 
-def check_args(data, train_dates, test_dates, rolling_window):
-    if not isinstance(data, pd.DataFrame):
-        raise TypeError(f"data must be pd.DataFrame, not {type(data)}")
+        # for every slice i is the end index
+        for_range = range(start_index, end_index)
+        if self.interactive:
+            for_range = tqdm.tqdm(for_range)
 
-    if not all(isinstance(date, np.datetime64) for date in train_dates):
-        raise TypeError("all training dates must be pd.Timestamp")
+        for i in for_range:
+            # slice_X has shape (n_companies, bptt)
+            # slice_y has shape (n_companies)
+            slice_X, slice_y = self._get_slice(
+                data=data,
+                start_index=i,
+                bptt=bptt,
+                shuffle_columns=shuffle_columns)
 
-    if not all(isinstance(date, np.datetime64) for date in test_dates):
-        raise TypeError("all test dates must be pd.Timestamp")
+            # split data statifying on y
+            tmp_X_train, tmp_X_valid, tmp_y_train, tmp_y_valid = train_test_split(
+                slice_X,
+                slice_y,
+                test_size=self.valid_percent,
+                stratify=slice_y)
 
-    if not isinstance(rolling_window, int):
-        raise TypeError(
-            f"rolling window must be int, not {type(rolling_window)}")
+            # append to the resulting lists
+            X_t.append(tmp_X_train)
+            X_v.append(tmp_X_valid)
+            y_t.append(tmp_y_train)
+            y_v.append(tmp_y_valid)
 
-    if rolling_window < 1:
-        raise ValueError("rolling window must be >= 1")
+        X_train = np.concatenate(X_t)  # shape=(n_train_samples, bptt)
+        X_valid = np.concatenate(X_v)  # shape=(n_valid_samples, bptt)
 
+        n_train_samples, nc_t = X_train.shape
+        assert nc_t == bptt
+        X_train = X_train.reshape(n_train_samples, nc_t, -1)
 
-def check_has_columns(data: pd.DataFrame):
-    if not 'date' in data.columns:
-        if not isinstance(data.index, pd.DatetimeIndex):
+        n_valid_samples, nc_v = X_valid.shape
+        assert nc_v == bptt
+        X_valid = X_valid.reshape(n_valid_samples, nc_v, -1)
+
+        y_train = np.concatenate(y_t)
+        y_valid = np.concatenate(y_v)
+
+        return X_train, X_valid, y_train, y_valid
+
+    def _get_slice(self, data: pd.DataFrame, start_index: int, bptt: int,
+                   shuffle_columns: bool) -> Tuple[np.ndarray, np.ndarray]:
+        """Return a slice of the X and y data.
+
+        X.shape[1] = y.shape[0]
+
+        Returns
+        -------
+        X: np.ndarray
+            array of shape (n_companies, bptt) where n_companies is the number
+            of companies with valid sequence data in the whole input data
+        
+        y: np.ndarray
+            array of shape (n_companies, ) with binary class labels (0, 1)
+        """
+        # the first bptt elements of the slice are the X, the last one
+        # is the target y
+        current_slice: pd.DataFrame = data.iloc[start_index -
+                                                bptt:start_index + 1, :]
+
+        # drop companies that don't have all points in this slice
+        current_slice = current_slice.dropna(axis='columns', how='any')
+        r, c = current_slice.shape
+
+        if r == 0 or c == 0:
             raise ValueError(
-                "no column named 'date' in the data and the index is not a datetime"
+                "there are no rows or no columns in the data after NaN deletion"
             )
+
+        if shuffle_columns:
+            col_indexes = np.random.permutation(c)
+            X = current_slice.iloc[:-1, col_indexes].values
+            returns = current_slice.iloc[-1, col_indexes].values
+        else:
+            X = current_slice.iloc[:-1, :].values
+            returns = current_slice.iloc[-1, :].values
+        # assign +1 and 0 classes if the value is above or below the slice median.
+        # the median is the day median for the considered bptt step
+        median = np.median(returns)
+
+        y = (returns > median).astype(np.int)
+
+        return X.transpose(), y
+
+    def __check_init_params(self, train_len, bptt, valid_percent,
+                            shuffle_in_time, shuffle_columns, interactive):
+        """Check the input parameters."""
+        if not isinstance(train_len, int):
+            raise TypeError(f"train_len must be int, not {type(train_len)}")
+
+        if bptt >= train_len:
+            raise ValueError(
+                f"bptt={bptt} and train_len={train_len}, should be the other way round"
+            )
+
+        if valid_percent < 0.0 or valid_percent > 0.99:
+            raise ValueError(
+                f"validation percent must be 0 <= v <= 0.99, got {valid_percent}"
+            )
+
+        if not isinstance(shuffle_in_time, bool):
+            raise TypeError(
+                f"shuffle_in_time must be bool, not {type(shuffle_in_time)}")
+
+        if not isinstance(shuffle_columns, bool):
+            raise TypeError(
+                f"shuffle_columns must be bool, not {type(shuffle_columns)}")
+
+        if not isinstance(interactive, bool):
+            raise TypeError(
+                f"interactive must be bool, not {type(interactive)}")
