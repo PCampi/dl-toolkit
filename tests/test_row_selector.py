@@ -1,13 +1,12 @@
 """Test the column selector."""
 
-import pytest
 import numpy as np
-import pandas as pd
 import numpy.testing as nt
+import pandas as pd
 import pandas.testing as pt
-from sklearn.exceptions import NotFittedError
+import pytest
 
-import preprocessing as pp
+import src.preprocessing as pp
 
 
 @pytest.fixture
@@ -23,37 +22,39 @@ def data() -> pd.DataFrame:
 
 
 def test_it_raises_wrong_init_params(data):
-    start = 1
-    end = 1
+    with pytest.raises(AssertionError):
+        pp.RowSelector(1, 1)
 
     with pytest.raises(AssertionError):
-        pp.RowSelector(start, end)
+        pp.RowSelector(2, 1)
 
-    start = 2
-    end = 1
     with pytest.raises(AssertionError):
-        pp.RowSelector(start, end)
-
-    start = 0
-    end = -5
-    with pytest.raises(AssertionError):
-        t = pp.RowSelector(start, end)
-        t.fit(data)
-
-    start = 0
-    end = data.shape[0] + 1
-    with pytest.raises(AssertionError):
-        t = pp.RowSelector(start, end)
-        t.fit(data)
-
-    start = -1
-    end = 3
-    with pytest.raises(AssertionError):
-        t = pp.RowSelector(start, end)
+        t = pp.RowSelector(0, -5)
         t.fit(data)
 
     with pytest.raises(AssertionError):
+        t = pp.RowSelector(0, data.shape[0] + 1)
+        t.fit(data)
+
+    with pytest.raises(AssertionError):
+        t = pp.RowSelector(-1, 3)
+
+    with pytest.raises(ValueError):
+        pp.RowSelector(start=-3, end=-1)
+
+    with pytest.raises(TypeError):
+        pp.RowSelector(start=True, end=-1)
+
+    with pytest.raises(TypeError):
+        pp.RowSelector(start=4, end=False)
+
+    with pytest.raises(TypeError):
+        pp.RowSelector(start=4, end='hello')
+
+    with pytest.raises(TypeError):
         pp.RowSelector(start='ciao', end=-1)
+
+    with pytest.raises(TypeError):
         pp.RowSelector(start=1, end=True)
 
 

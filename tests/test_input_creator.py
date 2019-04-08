@@ -1,9 +1,11 @@
+"""Test the RNN input creator module."""
+
 import numpy as np
-import pandas as pd
 import numpy.testing as nt
+import pandas as pd
 import pytest
 
-import rnn_input_creator as rn
+import src.rnn_input_creator as rn
 
 
 @pytest.fixture
@@ -16,6 +18,26 @@ def data():
     }
 
     return pd.DataFrame(data)
+
+
+def test_it_checks_data(data):
+    with pytest.raises(TypeError):
+        rn.create_dataset(data, ('f1'), 3, ['target1'])
+
+    with pytest.raises(TypeError):
+        rn.create_dataset(data, 'f1', 3, ['target1'])
+
+    with pytest.raises(TypeError):
+        rn.create_dataset(data, ['f1', 10], 3, ['target1'])
+
+    with pytest.raises(TypeError):
+        rn.create_dataset(data, ['f1'], 3, 'target1')
+
+    with pytest.raises(TypeError):
+        rn.create_dataset(data, ['f1'], 3, ('target1'))
+
+    with pytest.raises(TypeError):
+        rn.create_dataset(data, ['f1'], 3, [1, 2, 3])
 
 
 def test_single_target(data):

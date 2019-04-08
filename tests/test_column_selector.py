@@ -1,11 +1,11 @@
 """Test the column selector."""
 
-import pytest
 import numpy as np
-import pandas as pd
 import numpy.testing as nt
+import pandas as pd
+import pytest
 
-import preprocessing as pp
+import src.preprocessing as pp
 
 
 @pytest.fixture
@@ -22,23 +22,24 @@ def data():
 
 def test_it_raises_wrong_init_params(data):
     target_cols = ['f1', 10]
-    with pytest.raises(AssertionError):
+    with pytest.raises(TypeError):
         pp.ColumnSelector(target_cols)
 
-    target_cols = []
-    with pytest.raises(AssertionError):
-        pp.ColumnSelector(target_cols)
+    with pytest.raises(ValueError):
+        pp.ColumnSelector([])
 
-    target_cols = 'f1'
-    with pytest.raises(AssertionError):
-        pp.ColumnSelector(target_cols)
+    with pytest.raises(ValueError):
+        pp.ColumnSelector(())
+
+    with pytest.raises(ValueError):
+        pp.ColumnSelector('')
 
     target_cols = ['f2', '']
-    with pytest.raises(AssertionError):
+    with pytest.raises(ValueError):
         pp.ColumnSelector(target_cols)
 
-    target_cols = ['f1', 'f2', '']
-    with pytest.raises(AssertionError):
+    target_cols = ['f1', '', 'f2']
+    with pytest.raises(ValueError):
         pp.ColumnSelector(target_cols)
 
 
@@ -46,7 +47,7 @@ def test_it_selects_columns(data):
     target_cols = ['f1', 'f2']
     t = pp.ColumnSelector(target_cols)
 
-    result = t.fit(data).transform(data)
+    result = t.fit_transform(data)
     result_cols = result.columns
 
     assert isinstance(result, pd.DataFrame)
@@ -58,5 +59,5 @@ def test_it_raises_missing_column(data):
     target_cols = ['f1', 'f3']
     t = pp.ColumnSelector(target_cols)
 
-    with pytest.raises(AssertionError):
+    with pytest.raises(ValueError):
         t.fit(data)
