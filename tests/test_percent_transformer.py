@@ -60,7 +60,7 @@ def test_it_transforms_data(data: pd.DataFrame):
     result = perc.fit_transform(data)
 
     expected = data.loc[:, ['f2', 'f1']].pct_change(
-        periods=1, fill_method='pad')
+        periods=1, fill_method=None)
     expected.columns = ['f2_perc_change', 'f1_perc_change']
 
     pt.assert_frame_equal(expected, result)
