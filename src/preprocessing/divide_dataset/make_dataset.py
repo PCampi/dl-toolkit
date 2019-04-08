@@ -7,15 +7,15 @@ import pandas as pd
 from sklearn.model_selection import train_test_split
 import tqdm
 
-from src import preprocessing as opp
+from ..base import BasePandasTransformer
 
 
-class DatasetCreator(opp.BasePandasTransformer):
+class DatasetCreator(BasePandasTransformer):
     def __init__(self,
                  columns: Sequence[str],
-                 train_len=750,
-                 bptt=240,
-                 valid_percent=0.0,
+                 train_len: int,
+                 bptt: int,
+                 valid_percent: Union[float, None] = None,
                  shuffle_in_time=False,
                  shuffle_columns=False,
                  interactive=False):
