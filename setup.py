@@ -11,7 +11,7 @@ setuptools.setup(
     author='Pietro Mattia Campi',
     author_email='pietro.campi.21@gmail.com',
     description=
-    'Stock market time series preprocessing and forecasting using pandas, numpy and keras',
+    'Stock market time series preprocessing and forecasting using pandas and numpy.',
     long_description=long_desc,
     long_description_content_type='text/markdown',
     url='https://github.com/PieCampi/dl-toolkit',
