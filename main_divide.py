@@ -37,23 +37,8 @@ if __name__ == "__main__":
         columns=std_first_slice.columns,
         train_len=train_len,
         bptt=bptt,
-        valid_percent=0.0,  # this makes no validation data
-        shuffle_in_time=True,
         shuffle_columns=True,
         interactive=True)
 
     X_train, X_test, y_train, y_test = ds_creator.fit_transform(
-        std_first_slice)
-
-    # try also with validation data
-    ds_creator = dd.DatasetCreator(
-        columns=std_first_slice.columns,
-        train_len=train_len,
-        bptt=bptt,
-        valid_percent=0.2,
-        shuffle_in_time=True,
-        shuffle_columns=True,
-        interactive=True)
-
-    X_train, X_valid, X_test, y_train, y_valid, y_test = ds_creator.fit_transform(
         std_first_slice)
