@@ -11,6 +11,15 @@ from ..base import BasePandasTransformer
 
 
 class DatasetCreator(BasePandasTransformer):
+    """Create a dataset in the same way as Fischer 2018."""
+    columns: Sequence[str]
+    train_len: int
+    bptt: int
+    valid_percent: Union[None, float]
+    shuffle_in_time: bool
+    shuffle_columns: bool
+    interactive: bool
+
     def __init__(self,
                  columns: Sequence[str],
                  train_len: int,
@@ -35,7 +44,12 @@ class DatasetCreator(BasePandasTransformer):
 
         self.train_len = train_len
         self.bptt = bptt
-        self.valid_percent = valid_percent
+
+        if valid_percent and valid_percent > 0.0:
+            self.valid_percent = valid_percent
+        else:
+            self.valid_percent = None
+
         self.shuffle_in_time = shuffle_in_time
         self.shuffle_columns = shuffle_columns
         self.interactive = interactive
@@ -80,7 +94,7 @@ class DatasetCreator(BasePandasTransformer):
             X_train, X_valid, y_train, y_valid = self.subset_with_validation(
                 data=final_data,
                 start_index=self.bptt,
-                end_index=self.train_len - 1,
+                end_index=self.train_len,
                 bptt=self.bptt,
                 shuffle_columns=self.shuffle_columns,
                 valid_percent=self.valid_percent)
@@ -90,7 +104,7 @@ class DatasetCreator(BasePandasTransformer):
             X_train, y_train = self.subset_no_validation(
                 data=final_data,
                 start_index=self.bptt,
-                end_index=self.train_len - 1,
+                end_index=self.train_len,
                 bptt=self.bptt,
                 shuffle_columns=self.shuffle_columns)
 
@@ -100,7 +114,7 @@ class DatasetCreator(BasePandasTransformer):
             start_index=self.train_len,
             end_index=n,
             bptt=self.bptt,
-            shuffle_columns=False)
+            shuffle_columns=self.shuffle_columns)
 
         # check dimensions
         assert X_train.shape[0] == y_train.shape[0]
@@ -266,10 +280,11 @@ class DatasetCreator(BasePandasTransformer):
                 f"bptt={bptt} and train_len={train_len}, should be the other way round"
             )
 
-        if valid_percent < 0.0 or valid_percent > 0.99:
-            raise ValueError(
-                f"validation percent must be 0 <= v <= 0.99, got {valid_percent}"
-            )
+        if valid_percent:
+            if valid_percent < 0.0 or valid_percent > 0.99:
+                raise ValueError(
+                    f"validation percent must be 0 <= v <= 0.99, got {valid_percent}"
+                )
 
         if not isinstance(shuffle_in_time, bool):
             raise TypeError(
