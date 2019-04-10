@@ -37,7 +37,6 @@ if __name__ == "__main__":
         columns=std_first_slice.columns,
         train_len=train_len,
         bptt=bptt,
-        shuffle_columns=True,
         interactive=True)
 
     X_train, X_test, y_train, y_test = ds_creator.fit_transform(

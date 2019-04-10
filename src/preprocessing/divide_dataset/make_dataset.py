@@ -17,7 +17,6 @@ class DatasetCreator(BasePandasTransformer):
                  columns: Sequence[str],
                  train_len: int,
                  bptt: int,
-                 shuffle_columns=False,
                  interactive=False):
         """Make a dataset inside a study period,
         starting from a pd.DataFrame ordered by index.
@@ -28,12 +27,11 @@ class DatasetCreator(BasePandasTransformer):
         inside the training period we move from the beginning onwards in blocks
         of window_len days.
         """
-        self.__check_init_params(train_len, bptt, shuffle_columns, interactive)
+        self.__check_init_params(train_len, bptt, interactive)
         super().__init__(columns)
 
         self.train_len = train_len
         self.bptt = bptt
-        self.shuffle_columns = shuffle_columns
         self.interactive = interactive
 
         self.has_transformed = False
@@ -192,23 +190,13 @@ class DatasetCreator(BasePandasTransformer):
             )
 
         times.append((last_seq_index + 1) * np.ones(c, ))
-        if self.shuffle_columns:
-            col_indexes = np.random.permutation(c)
 
-            X_tmp = current_slice.iloc[:-1, col_indexes]
-            X = X_tmp.values
+        X_tmp = current_slice.iloc[:-1, :]
+        X = X_tmp.values
 
-            returns = current_slice.iloc[-1, col_indexes].values
+        returns = current_slice.iloc[-1, :].values
 
-            current_slice_companies = X_tmp.columns.tolist()
-        else:
-            X_tmp = current_slice.iloc[:-1, :]
-            X = X_tmp.values
-
-            returns = current_slice.iloc[-1, :].values
-
-            current_slice_companies = X_tmp.columns.tolist()
-
+        current_slice_companies = X_tmp.columns.tolist()
         names.append(current_slice_companies)
 
         # assign +1 and 0 classes if the value is above or below the slice median.
@@ -238,8 +226,7 @@ class DatasetCreator(BasePandasTransformer):
 
         return result
 
-    def __check_init_params(self, train_len, bptt, shuffle_columns,
-                            interactive):
+    def __check_init_params(self, train_len, bptt, interactive):
         """Check the input parameters."""
         if not isinstance(train_len, int):
             raise TypeError(f"train_len must be int, not {type(train_len)}")
@@ -248,10 +235,6 @@ class DatasetCreator(BasePandasTransformer):
             raise ValueError(
                 f"bptt={bptt} and train_len={train_len}, should be the other way round"
             )
-
-        if not isinstance(shuffle_columns, bool):
-            raise TypeError(
-                f"shuffle_columns must be bool, not {type(shuffle_columns)}")
 
         if not isinstance(interactive, bool):
             raise TypeError(
