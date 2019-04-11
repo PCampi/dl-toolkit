@@ -1,12 +1,4 @@
 numpy
 scipy
 scikit-learn
-matplotlib
-seaborn
-bokeh
-ipython
-jupyter
-cython
-tensorflow
-keras
 tqdm

@@ -5,3 +5,11 @@ rope
 pytest
 pytest-cov
 twine
+matplotlib
+seaborn
+bokeh
+ipython
+jupyter
+cython
+tensorflow
+keras
