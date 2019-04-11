@@ -50,9 +50,17 @@ def test_it_selects_columns(data):
     result = t.fit_transform(data)
     result_cols = result.columns
 
-    assert isinstance(result, pd.DataFrame)
     assert all(tc in result_cols for tc in target_cols)
     assert all(rc in target_cols for rc in result_cols)
+
+    target_cols = 'f1'
+    t = pp.ColumnSelector(target_cols)
+
+    result = t.fit_transform(data)
+    result_cols = result.columns
+
+    assert all(tc in result_cols for tc in [target_cols])
+    assert all(rc in [target_cols] for rc in result_cols)
 
 
 def test_it_raises_missing_column(data):

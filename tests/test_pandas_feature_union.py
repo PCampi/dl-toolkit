@@ -6,7 +6,7 @@ import pandas as pd
 import pandas.testing as pt
 import pytest
 from scipy import sparse
-import sklearn.pipeline as pline
+import sklearn.pipeline as skpl
 from sklearn.preprocessing import FunctionTransformer, MinMaxScaler
 
 import src.preprocessing as pp
@@ -29,13 +29,12 @@ def data():
 def test_it_concats_data(data: pd.DataFrame):
     transformer = pp.PandasFeatureUnion(
         [('1',
-          pline.Pipeline(steps=[
+          skpl.Pipeline(steps=[
               ('col_select',
                pp.ColumnSelector(['f1', 'f2', 'f3', 'target1', 'target2'])),
           ])),
          ('2',
-          pline.Pipeline(steps=[('col_select',
-                                 pp.ColumnSelector('income'))]))])
+          skpl.Pipeline(steps=[('col_select', pp.ColumnSelector('income'))]))])
 
     result = transformer.fit_transform(data)
     expected = data
@@ -44,13 +43,12 @@ def test_it_concats_data(data: pd.DataFrame):
 
     transformer = pp.PandasFeatureUnion(
         [('1',
-          pline.Pipeline(steps=[
+          skpl.Pipeline(steps=[
               ('col_select',
                pp.ColumnSelector(['f1', 'f2', 'f3', 'target1', 'target2'])),
           ])),
          ('2',
-          pline.Pipeline(steps=[('col_select',
-                                 pp.ColumnSelector('income'))]))])
+          skpl.Pipeline(steps=[('col_select', pp.ColumnSelector('income'))]))])
 
     result = transformer.fit(data).transform(data)
     expected = data
@@ -75,14 +73,17 @@ def test_it_returns_zeros_if_no_transformers(data: pd.DataFrame):
 def test_it_raises_on_sparse(data: pd.DataFrame):
     f2f3 = data.loc[:, ['f2', 'f3']]
     t1 = FunctionTransformer(lambda x: sparse.csr_matrix(f2f3), validate=False)
-    transformer = pp.PandasFeatureUnion([('1', t1),
-                                         ('2', pp.Log10Transformer(['f2']))])
+
+    log_pl = skpl.Pipeline(
+        steps=[('selection',
+                pp.ColumnSelector('f2')), ('log', pp.Log10Transformer())])
+
+    transformer = pp.PandasFeatureUnion([('1', t1), ('2', log_pl)])
 
     with pytest.raises(pp.SparseNotAllowedError):
         transformer.fit_transform(f2f3)
 
-    transformer = pp.PandasFeatureUnion([('1', t1),
-                                         ('2', pp.Log10Transformer(['f2']))])
+    transformer = pp.PandasFeatureUnion([('1', t1), ('2', log_pl)])
 
     with pytest.raises(pp.SparseNotAllowedError):
         transformer.fit(f2f3).transform(f2f3)

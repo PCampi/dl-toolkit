@@ -7,10 +7,10 @@ clean-pyc:
 	find . -name '*.pyo' -exec rm -f {} +
 
 clean-build:
-	rm -fr build/
-	rm -fr dist/
-	rm -fr *.egg-info
-	rm -r $(SRC_FOLDER)/*.egg-info
+	-rm -fr build/
+	-rm -fr dist/
+	-rm -fr *.egg-info
+	-rm -r $(SRC_FOLDER)/*.egg-info
 
 test: clean-pyc
 	py.test --verbose --color=yes $(TEST_PATH)
@@ -22,8 +22,8 @@ coverage-view: coverage
 	open htmlcov/index.html
 
 clean-coverage:
-	rm -r htmlcov
-	rm .coverage*
+	-rm -r htmlcov
+	-rm .coverage*
 
 dist: coverage
 	python3 setup.py sdist bdist_wheel

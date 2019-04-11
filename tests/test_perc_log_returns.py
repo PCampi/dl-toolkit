@@ -22,35 +22,42 @@ def data():
     return pd.DataFrame(data)
 
 
-def test_it_checks_init_params(data: pd.DataFrame):
+def test_log_ret_init():
     with pytest.raises(TypeError):
-        pp.PercentReturns((True, 'age'))
+        pp.LogReturns('1')
 
     with pytest.raises(TypeError):
-        pp.PercentReturns((0, 1.4))
-
-
-def test_it_checks_columns_in_df(data: pd.DataFrame):
-    with pytest.raises(ValueError):
-        pt = pp.PercentReturns(['f1', 'target3'])
-        pt.fit(data)
+        pp.LogReturns(True)
 
     with pytest.raises(ValueError):
-        pt = pp.PercentReturns(['target3', 'f1'])
-        pt.fit(data)
+        pp.LogReturns(0)
 
 
 def test_it_checks_no_zeros_in_a(data):
     with pytest.raises(ValueError):
-        pt = pp.PercentReturns(['f3', 'target1'])
-        pt.fit(data)
+        pr = pp.PercentReturns()
+        pr.fit(data.loc[:, ['f3', 'target1']])
+
+    with pytest.raises(ValueError):
+        lr = pp.LogReturns()
+        lr.fit(data.loc[:, ['f3', 'target1']])
 
 
-def test_it_transforms_data(data: pd.DataFrame):
-    pr = pp.PercentReturns(['f2', 'f1'])
-    result = pr.fit_transform(data)
+def test_it_computes_log_returns(data):
+    ground_log: pd.DataFrame = np.log(data[['f2', 'target1']])
+    ground = ground_log.diff(periods=1)
 
-    data_vals = data.loc[:, ['f2', 'f1']].values
+    lr_transformer = pp.LogReturns()
+    result = lr_transformer.fit_transform(data[['f2', 'target1']])
+
+    pt.assert_frame_equal(ground, result)
+
+
+def test_it_computes_perc_returns(data: pd.DataFrame):
+    pr = pp.PercentReturns()
+    result = pr.fit_transform(data[['f2', 'f1']])
+
+    data_vals = data[['f2', 'f1']].values
 
     expected_vals: np.ndarray = np.zeros_like(data_vals)
     expected_vals[0, :] = np.nan  # pylint: disable=unsupported-assignment-operation

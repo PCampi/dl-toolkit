@@ -37,7 +37,6 @@ class TimeseriesDateIntervalComputer(BasePandasTransformer):
             raise TypeError(
                 f"date_column must be str, not {type(date_column)}")
 
-        super().__init__(date_column)
         super()._check_str(date_column, 'date_column')
 
         self.date_column = date_column

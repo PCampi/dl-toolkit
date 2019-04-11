@@ -1,6 +1,6 @@
 """Transformers which operate on a single column."""
 
-from typing import List, Tuple, Type, TypeVar, Union, Callable, Sequence
+from typing import Type
 
 import numpy as np
 import pandas as pd
@@ -11,23 +11,20 @@ from .base import BasePandasTransformer
 class LogTransformer(BasePandasTransformer):
     """Apply a logarithm to the data specified in the column."""
 
-    def __init__(self, columns: Sequence[str]):
-        super().__init__(columns)
-
     def fit(self, X: pd.DataFrame, y=None) -> Type['LogTransformer']:
         self.prepare_to_fit(X)
 
-        if not np.all(X.loc[:, self.columns] > 0):
+        if not np.all(X > 0):
             raise ValueError(
                 "cannot compute the log of zero, there are some zero entries in X"
             )
         return self
 
     def transform(self, X: pd.DataFrame) -> pd.DataFrame:
-        return np.log(X.loc[:, self.columns])
+        return np.log(X)
 
     def inverse_transform(self, X: pd.DataFrame) -> pd.DataFrame:
-        return np.exp(X.loc[:, self.columns])
+        return np.exp(X)
 
 
 class Log10Transformer(BasePandasTransformer):
@@ -36,7 +33,7 @@ class Log10Transformer(BasePandasTransformer):
     def fit(self, X: pd.DataFrame, y=None):
         self.prepare_to_fit(X)
 
-        if not np.all(X.loc[:, self.columns] > 0):
+        if not np.all(X > 0):
             raise ValueError(
                 "cannot compute the log of zero, there are some zero entries in X"
             )
@@ -44,22 +41,20 @@ class Log10Transformer(BasePandasTransformer):
         return self
 
     def transform(self, X: pd.DataFrame) -> pd.DataFrame:
-        return np.log10(X.loc[:, self.columns])
+        return np.log10(X)
 
     def inverse_transform(self, X: pd.DataFrame) -> pd.DataFrame:
-        return np.power(10, X.loc[:, self.columns])
+        return np.power(10, X)
 
 
 class PercentChangeTransformer(BasePandasTransformer):
     """Percent change over columns, starting from the first element."""
 
-    def __init__(self, columns: Sequence[str], periods=1):
+    def __init__(self, periods=1):
         """Percent change over columns, using periods steps between data points.
 
         Parameters
         ----------
-        column: Sequence[str]
-            the columns on which to compute the change
         periods: int
             number of periods between data points to use for computing the change
         """
@@ -71,23 +66,28 @@ class PercentChangeTransformer(BasePandasTransformer):
         if periods < 1:
             raise ValueError(f"periods must be >= 1, got {periods}")
 
-        super().__init__(columns)
         self.periods = periods
 
     def fit(self, X: pd.DataFrame, y=None) -> Type['PercentChangeTransformer']:
         self.prepare_to_fit(X)
 
-        if not np.all(X.loc[:, self.columns].values > 0.0):
-            raise ValueError("cannot divide by zero and data contains zeros")
+        if self.periods >= X.shape[0]:
+            raise ValueError(
+                f"not enough rows ({X.shape[0]}) for a period of ({self.periods})"
+            )
+
+        vals = X.values
+
+        if np.any(vals == 0.0):
+            where = np.where(vals == 0.0)
+            raise ValueError(
+                f"data contains zeros at indexes {where[0].tolist()}, cannot divide by zero"
+            )
 
         return self
 
     def transform(self, X: pd.DataFrame) -> pd.DataFrame:
-        result = X.loc[:, self.columns].pct_change(
-            periods=self.periods, fill_method=None)
-
-        new_cols = [f"{old_col}_perc_change" for old_col in result.columns]
-        result.columns = new_cols
+        result = X.pct_change(periods=self.periods, fill_method=None)
 
         return result
 
@@ -95,9 +95,8 @@ class PercentChangeTransformer(BasePandasTransformer):
 class MovingAverageTransformer(BasePandasTransformer):
     """Moving average."""
 
-    def __init__(self, column: str, window=10, kind='simple'):
-        super().__init__(column)
-        self._check_init_params(column, window, kind)
+    def __init__(self, window, kind='simple'):
+        self._check_init_params(window, kind)
 
         self.window = window
         self.kind = kind
@@ -114,15 +113,15 @@ class MovingAverageTransformer(BasePandasTransformer):
 
     def transform(self, X: pd.DataFrame) -> pd.DataFrame:
         if self.kind == 'simple':
-            rolling = X.loc[:, self.columns].rolling(window=self.window).mean()
+            rolling = X.rolling(window=self.window).mean()
         elif self.kind in {'exp', 'exponential'}:
-            rolling = X.loc[:, self.columns].ewm(
+            rolling = X.ewm(
                 span=self.window,
                 adjust=True).mean()  # use adjusted as Yulu suggested
 
         return rolling
 
-    def _check_init_params(self, column: str, window: int, kind: str):
+    def _check_init_params(self, window: int, kind: str):
         if not isinstance(window, int):
             raise TypeError(
                 f"window parameter must be an integer, got {type(window)}")

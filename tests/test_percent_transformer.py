@@ -24,43 +24,25 @@ def data():
 
 def test_it_checks_init_params(data: pd.DataFrame):
     with pytest.raises(TypeError):
-        pp.PercentChangeTransformer((True, 'age'))
+        pp.PercentChangeTransformer(periods=True)
 
     with pytest.raises(TypeError):
-        pp.PercentChangeTransformer((0, 1.4))
-
-    with pytest.raises(TypeError):
-        pp.PercentChangeTransformer(['f1', 'f2'], periods=True)
-
-    with pytest.raises(TypeError):
-        pp.PercentChangeTransformer(['f1', 'f2'], periods='1')
+        pp.PercentChangeTransformer(periods='1')
 
     with pytest.raises(ValueError):
-        pp.PercentChangeTransformer(['f1', 'f2'], periods=0)
-
-
-def test_it_checks_columns_in_df(data: pd.DataFrame):
-    with pytest.raises(ValueError):
-        pt = pp.PercentChangeTransformer(['f1', 'target3'])
-        pt.fit(data)
-
-    with pytest.raises(ValueError):
-        pt = pp.PercentChangeTransformer(['target3', 'f1'])
-        pt.fit(data)
+        pp.PercentChangeTransformer(periods=0)
 
 
 def test_it_checks_no_zeros_in_a(data):
     with pytest.raises(ValueError):
-        pt = pp.PercentChangeTransformer(['f3', 'target1'])
-        pt.fit(data)
+        pt = pp.PercentChangeTransformer()
+        pt.fit(data[['target1', 'f3']])
 
 
 def test_it_transforms_data(data: pd.DataFrame):
-    perc = pp.PercentChangeTransformer(['f2', 'f1'], periods=1)
-    result = perc.fit_transform(data)
+    perc = pp.PercentChangeTransformer(periods=1)
+    result = perc.fit_transform(data[['f2', 'f1']])
 
-    expected = data.loc[:, ['f2', 'f1']].pct_change(
-        periods=1, fill_method=None)
-    expected.columns = ['f2_perc_change', 'f1_perc_change']
+    expected = data[['f2', 'f1']].pct_change(periods=1, fill_method=None)
 
     pt.assert_frame_equal(expected, result)

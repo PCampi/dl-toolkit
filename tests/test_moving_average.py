@@ -24,41 +24,35 @@ def data():
 
 def test_it_checks_init_params():
     with pytest.raises(TypeError):
-        pp.MovingAverageTransformer(0, 10)
+        pp.MovingAverageTransformer('ciao')
 
     with pytest.raises(ValueError):
-        pp.MovingAverageTransformer('', 10)
-
-    with pytest.raises(TypeError):
-        pp.MovingAverageTransformer('f1', '10')
+        pp.MovingAverageTransformer(1)
 
     with pytest.raises(ValueError):
-        pp.MovingAverageTransformer('f1', 1)
-
-    with pytest.raises(ValueError):
-        pp.MovingAverageTransformer('f1', 10, kind='expo')
+        pp.MovingAverageTransformer(10, kind='expo')
 
 
 def test_it_checks_window_len(data):
     l = data.shape[0]
 
     with pytest.raises(ValueError):
-        mat = pp.MovingAverageTransformer('f1', window=l)
-        mat.fit(data)
+        mat = pp.MovingAverageTransformer(window=l)
+        mat.fit(data[['f1']])
 
 
 def test_it_computes_simple_moving_average(data):
-    simple_ma = pp.MovingAverageTransformer('target1', window=2, kind='simple')
+    simple_ma = pp.MovingAverageTransformer(window=2, kind='simple')
 
-    result = simple_ma.fit_transform(data)
+    result = simple_ma.fit_transform(data[['target1']])
     desired = pd.DataFrame(
         data={'target1': np.array([np.nan, 100.5, 101.5, 102.5, 103.5])})
 
     pt.assert_frame_equal(result, desired)
 
-    simple_ma = pp.MovingAverageTransformer('target1', window=3, kind='simple')
+    simple_ma = pp.MovingAverageTransformer(window=3, kind='simple')
 
-    result = simple_ma.fit_transform(data)
+    result = simple_ma.fit_transform(data[['target1']])
     desired = pd.DataFrame(
         data={'target1': np.array([np.nan, np.nan, 101, 102, 103])})
 
@@ -66,10 +60,16 @@ def test_it_computes_simple_moving_average(data):
 
 
 def test_it_computes_exp_moving_average(data):
-    exp_ma = pp.MovingAverageTransformer(
-        'target1', window=3, kind='exponential')
+    exp_ma = pp.MovingAverageTransformer(window=3, kind='exponential')
 
-    result = exp_ma.fit_transform(data)
-    desired = data.loc[:, ['target1']].ewm(span=3, adjust=True).mean()
+    result = exp_ma.fit_transform(data[['target1']])
+    desired = data[['target1']].ewm(span=3, adjust=True).mean()
+
+    pt.assert_frame_equal(result, desired)
+
+    exp_ma = pp.MovingAverageTransformer(window=3, kind='exp')
+
+    result = exp_ma.fit_transform(data[['target1']])
+    desired = data[['target1']].ewm(span=3, adjust=True).mean()
 
     pt.assert_frame_equal(result, desired)

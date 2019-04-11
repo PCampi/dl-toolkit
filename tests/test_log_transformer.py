@@ -21,42 +21,28 @@ def data():
     return pd.DataFrame(data)
 
 
-def test_it_raises_wrong_init_params(data):
-    with pytest.raises(TypeError):
-        pp.LogTransformer(1)
-
-    with pytest.raises(ValueError):
-        pp.LogTransformer('')
-
-    with pytest.raises(TypeError):
-        pp.Log10Transformer(1)
-
-    with pytest.raises(ValueError):
-        pp.Log10Transformer('')
-
-
 def test_it_raises_log_zero(data):
-    lt = pp.LogTransformer('f1')
+    lt = pp.LogTransformer()
     with pytest.raises(ValueError):
-        lt.fit_transform(data)
+        lt.fit_transform(data.loc[:, ['f1']])
 
-    lt = pp.Log10Transformer('f1')
+    lt = pp.Log10Transformer()
     with pytest.raises(ValueError):
-        lt.fit_transform(data)
+        lt.fit_transform(data.loc[:, ['f1']])
 
 
 def test_it_makes_log(data):
-    lt = pp.LogTransformer('f2')
+    lt = pp.LogTransformer()
 
-    result = lt.fit(data).transform(data)
+    result = lt.fit_transform(data.loc[:, ['f2']])
     expected: pd.DataFrame = np.log(data.loc[:, ['f2']])
 
     nt.assert_array_equal(result.values, expected.values)
     pt.assert_frame_equal(result, expected)
 
-    lt = pp.Log10Transformer('f2')
+    lt = pp.Log10Transformer()
 
-    result = lt.fit(data).transform(data)
+    result = lt.fit_transform(data.loc[:, ['f2']])
     expected: pd.DataFrame = np.log10(data.loc[:, ['f2']])
 
     nt.assert_array_equal(result.values, expected.values)
@@ -64,18 +50,18 @@ def test_it_makes_log(data):
 
 
 def test_it_makes_inverse_transform(data):
-    lt = pp.LogTransformer('f2')
+    lt = pp.LogTransformer()
 
-    log = lt.fit_transform(data)
+    log = lt.fit_transform(data.loc[:, ['f2']])
     result = lt.inverse_transform(log)
     expected = data.loc[:, ['f2']].astype(np.float)
 
     nt.assert_almost_equal(result.values, expected.values)
     pt.assert_frame_equal(result, expected)
 
-    lt = pp.Log10Transformer('f2')
+    lt = pp.Log10Transformer()
 
-    log = lt.fit_transform(data)
+    log = lt.fit_transform(data.loc[:, ['f2']])
     result = lt.inverse_transform(log)
     expected = data.loc[:, ['f2']].astype(np.float)
 

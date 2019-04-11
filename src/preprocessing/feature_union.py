@@ -19,47 +19,12 @@ class SparseNotAllowedError(Exception):
     pass
 
 
-class DataFrameWrapper(BasePandasTransformer):
-    """Take some data and put it into a DataFrame."""
-
-    def __init__(self, columns: List[str], index=None):
-        super().__init__(columns)
-        self.index = index
-
-    def fit(self, X: np.ndarray, y=None) -> Type['DataFrameWrapper']:
-        if not isinstance(X, np.ndarray):
-            raise TypeError(f"X must be a np.ndarray, got {type(X)}")
-
-        if X.ndim == 1:
-            raise ValueError(
-                f"X must have 2 dimensions, got array with shape {X.shape}")
-
-        if not X.shape[1] == len(self.columns):
-            raise ValueError(
-                f"declared columns length ({len(self.columns)}) and data.shape[1] ({X.shape[1]}) do not match"
-            )
-
-        return self
-
-    def transform(self, X: np.ndarray) -> pd.DataFrame:
-        if self.index is not None:
-            if not len(self.index) == X.shape[0]:
-                raise ValueError(
-                    f"provided index len ({len(self.index)}) does not match data len ({X.shape[0]})"
-                )
-            else:
-                return pd.DataFrame(
-                    data=X, columns=self.columns, index=self.index)
-        else:
-            return pd.DataFrame(data=X, columns=self.columns)
-
-
 class PandasFeatureUnion(FeatureUnion):
     """Scikit-learn feature union with support for pandas DataFrames."""
 
     def merge_dataframes_by_column(self, Xs) -> pd.DataFrame:
         """Merge dataframes stacking them column by column."""
-        return pd.concat(Xs, axis="columns", copy=False)
+        return pd.concat(Xs, axis="columns", copy=True)
 
     def transform(self, X: pd.DataFrame) -> pd.DataFrame:
         """Transform X separately by each transformer, concatenate results.

@@ -1,6 +1,6 @@
 """Transformer which wraps the specified data into a DataFrame, with the specified columns."""
 
-from typing import Type, Sequence
+from typing import Optional, Type
 
 import numpy as np
 import pandas as pd
@@ -12,11 +12,10 @@ from .base import BasePandasTransformer
 
 class BaseScaler(BasePandasTransformer):
     """Base class for pandas scalers."""
+    scaler_: TransformerMixin = None
+    train_len: Optional[int]
 
-    def __init__(self, columns: Sequence[str], train_len: int = None):
-        super().__init__(columns)
-        self.scaler_: TransformerMixin = None
-
+    def __init__(self, train_len: int = None):
         if train_len is not None:
             if not isinstance(train_len, int):
                 raise TypeError(
@@ -28,20 +27,20 @@ class BaseScaler(BasePandasTransformer):
         self.train_len = train_len
 
     def transform(self, X: pd.DataFrame) -> pd.DataFrame:
-        transformed_data = self.scaler_.transform(
-            X.loc[:, self.columns].values)
+        transformed_data = self.scaler_.transform(X.values)
 
         result = pd.DataFrame(
-            data=transformed_data, columns=self.columns, index=self.index_)
+            data=transformed_data, columns=self.columns_, index=self.index_)
 
         return result
 
     def inverse_transform(self, X: pd.DataFrame) -> pd.DataFrame:
-        inv_transformed_data = self.scaler_.inverse_transform(
-            X.loc[:, self.columns].values)
+        inv_transformed_data = self.scaler_.inverse_transform(X.values)
 
         result = pd.DataFrame(
-            data=inv_transformed_data, columns=self.columns, index=self.index_)
+            data=inv_transformed_data,
+            columns=self.columns_,
+            index=self.index_)
 
         return result
 
@@ -49,12 +48,8 @@ class BaseScaler(BasePandasTransformer):
 class MinMaxScaler(BaseScaler):
     """Scale the input in a range."""
 
-    def __init__(self,
-                 columns: Sequence[str],
-                 feature_range=(0, 1),
-                 copy=True,
-                 train_len: int = None):
-        super().__init__(columns, train_len)
+    def __init__(self, feature_range=(0, 1), copy=True, train_len: int = None):
+        super().__init__(train_len)
 
         self.feature_range = feature_range
         self.copy = copy
@@ -69,13 +64,10 @@ class MinMaxScaler(BaseScaler):
         self.scaler_ = skpp.MinMaxScaler(
             feature_range=self.feature_range, copy=self.copy)
 
-        # must use index-based indexing because of training length constraint
-        columns = [X.columns.get_loc(col_name) for col_name in self.columns]
-
         if self.train_len:
-            self.scaler_.fit(X.iloc[:self.train_len, columns].values)
+            self.scaler_.fit(X.iloc[:self.train_len, :].values)
         else:
-            self.scaler_.fit(X.iloc[:, columns].values)
+            self.scaler_.fit(X.values)
 
         return self
 
@@ -84,12 +76,11 @@ class StandardScaler(BaseScaler):
     """Scale the input to have zero mean and unit variance."""
 
     def __init__(self,
-                 columns: Sequence[str],
                  copy=True,
                  with_mean=True,
                  with_std=True,
                  train_len: int = None):
-        super().__init__(columns, train_len)
+        super().__init__(train_len)
 
         self.copy = copy
         self.with_mean = with_mean
@@ -105,12 +96,9 @@ class StandardScaler(BaseScaler):
         self.scaler_ = skpp.StandardScaler(
             copy=self.copy, with_mean=self.with_mean, with_std=self.with_std)
 
-        # must use index-based indexing because of training length constraint
-        columns = [X.columns.get_loc(col_name) for col_name in self.columns]
-
         if self.train_len:
-            self.scaler_.fit(X.iloc[:self.train_len, columns].values)
+            self.scaler_.fit(X.iloc[:self.train_len, :].values)
         else:
-            self.scaler_.fit(X.iloc[:, columns].values)
+            self.scaler_.fit(X.values)
 
         return self

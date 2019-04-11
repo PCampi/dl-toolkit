@@ -8,66 +8,37 @@ from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.exceptions import NotFittedError
 
 
+class EmptyDataFrameError(Exception):
+    pass
+
+
 class BasePandasTransformer(BaseEstimator, TransformerMixin):
     """Base class for a pandas transformer.
     Provides facilities for type checking and error reporting.
     """
-
-    def __init__(self, columns: Sequence[str]):
-        self.index_ = None
-        self.columns = self.check_column_params(columns)
-
-    def check_column_params(self, columns: Sequence[str]):
-        """Check that the columns parameter is sane.
-
-        Allowed forms for the column parameter are:
-        - list of str
-        - tuple of str
-        - str
-
-        The output of this function is always a normalized version of the
-        column parameter, as a list of str.
-        """
-        cols = self.__normalize_column_param(columns)
-
-        for i, column in enumerate(cols):
-            self._check_str(column, f"column[{i}]")
-
-        return cols
-
-    def __normalize_column_param(self, columns: Sequence[str]):
-        if isinstance(columns, list):
-            if len(columns) < 1:
-                raise ValueError("empty column parameter")
-            return columns
-        elif isinstance(columns, tuple):
-            if len(columns) < 1:
-                raise ValueError("empty column parameter")
-            return [*columns]
-        elif isinstance(columns, str):
-            return [columns]
-        elif isinstance(columns, pd.Index):
-            return columns.tolist()
-        else:
-            raise TypeError(
-                f"column parameter must be a Sequence[str], not {type(columns)}"
-            )
+    index_: pd.Index
+    columns_: pd.Index
 
     def prepare_to_fit(self, X: pd.DataFrame, y=None):
-        """Check the type of X (optionally y) and save the index of X."""
+        """Check the type of X (optionally y) and save the index and columns of X."""
         self._check_types(X, y)
 
-        X_cols = X.columns
-        for i, column in enumerate(self.columns):
-            if not column in X_cols:
-                raise ValueError(
-                    f"column[{i}] ({column}) not found in input data")
+        if X.empty:
+            raise EmptyDataFrameError(f"X is empty with shape {X.shape}")
 
         self.index_ = X.index
 
+        X_cols = X.columns
+
+        # prevent returning a series from 'transform' in subclasses
+        if len(X_cols) == 1:
+            self.columns_ = X_cols.tolist()
+        else:
+            self.columns_ = X_cols
+
     def _check_types(self, X, y=None):
         if not isinstance(X, pd.DataFrame):
-            raise TypeError(f"X should be a {pd.DataFrame}, got {type(X)}")
+            raise TypeError(f"X should be a {pd.DataFrame}, not {type(X)}")
 
         if (y is not None) and (not isinstance(y, np.ndarray)):
             raise TypeError(f"y should be a {np.ndarray}, got {type(y)}")

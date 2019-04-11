@@ -62,10 +62,29 @@ class ColumnSelector(BasePandasTransformer):
     """Select some columns of the data."""
 
     def __init__(self, columns=Sequence[str]):
-        super().__init__(columns)
+        if not columns:
+            raise ValueError("column cannot be none or empty sequence")
+
+        if isinstance(columns, str):
+            self.columns = [columns]
+            super()._check_str(columns, "columns")
+        else:
+            for i, col in enumerate(columns):
+                super()._check_str(col, f"column[{i}]")
+            self.columns = columns
 
     def fit(self, X: pd.DataFrame, y=None) -> Type['ColumnSelector']:
         self.prepare_to_fit(X)
+
+        X_cols = set(X.columns.tolist())
+        missing = set()
+        for col in self.columns:
+            if col not in X_cols:
+                missing.add(col)
+
+        if len(missing) > 0:
+            raise ValueError(
+                f"missing columns in data: {[x for x in missing]}")
 
         return self
 
